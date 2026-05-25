@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      // Redireciona o erro 404 para a página principal, mantendo o caminho da rota
+      var path = window.location.pathname.split('/').slice(2).join('/');
+      window.location.replace('/SARAHTVLAN/' + '?p=' + path);
+    </script>
+  </head>
+  <body></body>
+</html>
