@@ -1,0 +1,173 @@
+/* 
+  ========================================================================
+  SKIN, INTERFACE AND LAYOUT SPECIFICATIONS (COSMIC TERMINAL SYSTEM)
+  ========================================================================
+  Designed for digital signage street monitors and high-fidelity layouts.
+  This stylesheet aggregates custom key utilities, borders, glow layers,
+  and container specs to transport the exact visual design of the app.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* --- CUSTOM THEME DECLARATIONS & SYSTEM TOKENS --- */
+:root {
+  --color-brand-emerald: #10b981;
+  --color-brand-emerald-glow: rgba(16, 185, 129, 0.45);
+  --color-brand-rose: #e11d48;
+  --color-brand-rose-glow: rgba(225, 29, 72, 0.4);
+  --color-yellow-gold: #facc15;
+  --color-bg-stone-black: #050505;
+  --color-bg-interactive: #0a0f0d;
+
+  /* Typography Styles */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* --- PHYSICAL MONITOR SKIN (SLATE METALLIC FINISH & SCREEN FRAME) --- */
+.physical-tv-frame {
+  position: relative;
+  background-color: var(--color-bg-stone-black);
+  border: 10px solid #292524; /* border-stone-850 sleek metal border */
+  border-radius: 1.8rem; /* rounded-3xl smooth corners */
+  padding: 0.25rem; /* p-1 gap protection */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95); /* ultra deep realistic shadow */
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+}
+
+/* --- THE SIMULATED HUD SCREEN HEADER --- */
+.screen-hud-header {
+  position: relative;
+  width: 100%;
+  height: 2rem; /* h-8 */
+  background-color: rgba(0, 0, 0, 0.75); /* bg-black/75 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* border-white/10 */
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  user-select: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* --- VDO.NINJA EMBEDDED STYLES --- */
+.vdo-ninja-embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: auto;
+}
+
+/* --- MARQUEE TICKER ANIMATION SPEED & BEHAVIOR --- */
+.news-ticker-container {
+  position: relative;
+  width: 100%;
+  height: 2.25rem; /* h-9 */
+  background-color: rgba(0, 31, 23, 0.95); /* bg-[#001f17]/95 */
+  border-top: 2px solid var(--color-yellow-gold); /* border-t-2 border-yellow-400 */
+  display: flex;
+  align-items: center;
+  z-index: 10;
+  user-select: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.news-label-tag {
+  height: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  background-color: var(--color-yellow-gold);
+  color: #1c1917; /* text-stone-900 */
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.news-marquee-box {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+}
+
+.news-marquee-text {
+  position: absolute;
+  white-space: nowrap;
+  animation: marquee-slow 30s linear infinite;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 0.5rem;
+}
+
+@keyframes marquee-slow {
+  0% { transform: translate3d(100%, 0, 0); }
+  100% { transform: translate3d(-100%, 0, 0); }
+}
+
+/* --- MICROPHONE & CAMERA ACCESS HOVER DIALOGS --- */
+.sound-unmute-overlay-button {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  z-index: 20;
+  background-color: var(--color-brand-rose);
+  color: #ffffff;
+  border: 1px solid rgba(251, 113, 133, 0.5); /* border-rose-455 */
+  padding: 0.25rem 0.75rem;
+  font-size: 8.5px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 0 15px var(--color-brand-rose-glow);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sound-unmute-overlay-button:hover {
+  background-color: #f43f5e;
+  transform: scale(1.05);
+}
+
+.sound-unmute-overlay-button:active {
+  transform: scale(0.95);
+}
+
+/* --- THE PASSENGER PHONE SKIN (INTEGRATED SUB-COMPONENT) --- */
+.passenger-phone-chassis {
+  width: 100%;
+  border-radius: 3rem; /* rounded-[3rem] */
+  background-color: #0f172a; /* bg-slate-900 shell */
+  border: 12px solid #1e293b; /* border-slate-800 phone border */
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85);
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 9 / 19.5; /* authentic modern screen proportions */
+}

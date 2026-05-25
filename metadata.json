@@ -1,0 +1,8 @@
+{
+  "name": "TV Signage - Retransmissor de Comerciais",
+  "description": "Sistema completo de controle e retransmissão de comerciais, anúncios, notícias em faixa e horários de ônibus com sincronização em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
