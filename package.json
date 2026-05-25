@@ -6,11 +6,11 @@
   "overrides": {
     "node-domexception": "file:./mocks/node-domexception"
   },
-  "scripts": {
-  "dev": "vite",
-  "build": "tsc && vite build",
-  "preview": "vite preview"
-}
+ "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "@google/genai": "^1.29.0",
     "react-router-dom": "^6.20.0"
