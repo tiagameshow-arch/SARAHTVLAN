@@ -3,7 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // Isto força o Vite a buscar os arquivos usando caminhos relativos (./)
-  // em vez de caminhos absolutos (/) que quebram no Vercel.
-  base: './', 
+  base: './', // O ponto aqui é crucial para caminhos relativos
 })
