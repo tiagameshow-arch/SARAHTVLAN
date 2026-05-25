@@ -3,6 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // O ponto abaixo diz: "procure os arquivos na mesma pasta onde estou"
+  // Isto é obrigatório para o Vercel não se perder nas pastas
   base: './', 
 })
