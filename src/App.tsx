@@ -1,38 +1,41 @@
 import React, { useState, useEffect } from 'react';
 
-// O seu componente principal que já funciona
+// --- SEU CÓDIGO ATUAL ---
+// Mantenha aqui toda a lógica que você já tem (o PainelPrincipal)
 const PainelPrincipal = () => {
-  // Coloque aqui todo o código da interface que você já tem funcionando
   return (
-    <div>
-      {/* Todo o seu HTML/Componentes atuais */}
-      <h1>Painel de Retransmissão</h1>
+    <div style={{ color: '#39FF14', padding: '20px', fontFamily: 'Courier New' }}>
+      <h1>Retransmissor e TV de Sinalização</h1>
+      {/* O SEU CÓDIGO FUNCIONAL VAI AQUI DENTRO */}
+    </div>
+  );
+};
+
+// --- CONTROLE TÁTIL SIMPLIFICADO ---
+const InterfaceControle = () => {
+  return (
+    <div style={{ background: '#000', color: '#39FF14', height: '100vh', padding: '20px' }}>
+      <h1>CONTROLE REMOTO TÁTIL</h1>
+      <button style={{ padding: '20px', width: '100%', background: '#39FF14', color: '#000', fontWeight: 'bold' }}>
+        ENVIAR SINAL DE VÍDEO
+      </button>
     </div>
   );
 };
 
 export default function App() {
-  const [view, setView] = useState('monitor');
+  const [isControle, setIsControle] = useState(false);
 
   useEffect(() => {
-    // Verifica se a URL contém '/controle'
-    if (window.location.pathname.includes('/controle')) {
-      setView('controle');
-    } else {
-      setView('monitor');
+    // Verifica se a URL termina em /controle
+    if (window.location.pathname.endsWith('/controle')) {
+      setIsControle(true);
     }
   }, []);
 
   return (
     <>
-      {view === 'controle' ? (
-        <div style={{ padding: '20px', background: '#111', color: '#fff' }}>
-          <h1>INTERFACE DE CONTROLE TÁTIL</h1>
-          {/* AQUI VOCÊ SÓ COLOCA OS BOTÕES QUE QUER NO CELULAR */}
-        </div>
-      ) : (
-        <PainelPrincipal />
-      )}
+      {isControle ? <InterfaceControle /> : <PainelPrincipal />}
     </>
   );
 }
