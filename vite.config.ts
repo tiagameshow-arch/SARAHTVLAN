@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  build: {
-    outDir: 'dist' // Garante que a pasta de saída é a correta
-  }
+  // O ponto abaixo diz: "procure os arquivos na mesma pasta onde estou"
+  base: './', 
 })
