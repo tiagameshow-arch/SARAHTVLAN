@@ -72,7 +72,7 @@ import { getDatabase, ref, onValue, set } from "firebase/database";
 
 // Substitua com as credenciais que o Firebase te der
 const firebaseConfig = {
-  databaseURL: "SUA_URL_DO_REALTIME_DATABASE_AQUI"
+  databaseURL: "https://sarahtvlan-default-rtdb.firebaseio.com/"
 };
 
 const app = initializeApp(firebaseConfig);
