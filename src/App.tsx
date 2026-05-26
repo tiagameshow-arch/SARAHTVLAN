@@ -67,3 +67,27 @@ export default function App() {
     </Router>
   );
 }
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, set } from "firebase/database";
+
+// Substitua com as credenciais que o Firebase te der
+const firebaseConfig = {
+  databaseURL: "SUA_URL_DO_REALTIME_DATABASE_AQUI"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// --- DENTRO DA TELA DA TV (Onde lê o dado) ---
+useEffect(() => {
+  const statusRef = ref(db, 'statusTV');
+  onValue(statusRef, (snapshot) => {
+    const data = snapshot.val();
+    setMensagem(data.mensagem);
+  });
+}, []);
+
+// --- DENTRO DO PAINEL DE CONTROLE (Onde escreve o dado) ---
+const enviarComando = (novaMensagem) => {
+  set(ref(db, 'statusTV'), { mensagem: novaMensagem });
+};
