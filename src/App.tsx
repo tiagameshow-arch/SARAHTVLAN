@@ -1,32 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-// 1. Definição do PainelPrincipal (O código da sua interface original deve ir aqui dentro)
+// 1. O seu painel de controle (código original)
 const PainelPrincipal = () => {
   return (
-    <div style={{ color: '#39FF14', padding: '20px' }}>
-      <h1>Retransmissor & TV de Sinalização</h1>
-      
-      {/* ADICIONE ESTE BLOCO ABAIXO PARA TESTAR */}
-      <div style={{ border: '2px solid red', padding: '20px', marginTop: '20px' }}>
-        <h2 style={{ color: 'white' }}>TESTE DE RENDERIZAÇÃO</h2>
-        <p>Se você vê este texto, o componente está carregando!</p>
+    <div style={{ color: '#39FF14', padding: '20px', fontFamily: 'monospace', textAlign: 'center' }}>
+      <h1>SARAHTVLAN - PAINEL OPERACIONAL</h1>
+      <div style={{ marginTop: '50px' }}>
+        <button 
+          style={{ padding: '20px 40px', fontSize: '20px', background: '#39FF14', border: 'none', cursor: 'pointer' }}
+          onClick={() => alert('Sistema de Controle Ativo!')}
+        >
+          INICIAR MONITORAMENTO
+        </button>
       </div>
-      {/* ------------------------------------- */}
-      
     </div>
   );
 };
 
-// 2. Componente principal App
+// 2. O componente App que encapsula tudo
 export default function App() {
-  const [debug, setDebug] = useState("Iniciando...");
-
-  useEffect(() => {
-    setDebug("Componente montado.");
-  }, []);
-
   return (
-    <div style={{ background: '#000', minHeight: '100vh' }}>
+    <div style={{ background: '#000', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <PainelPrincipal />
     </div>
   );
