@@ -3,10 +3,16 @@ import React, { useState, useEffect } from 'react';
 // 1. Definição do PainelPrincipal (O código da sua interface original deve ir aqui dentro)
 const PainelPrincipal = () => {
   return (
-    <div style={{ color: '#39FF14', padding: '20px', fontFamily: 'monospace' }}>
+    <div style={{ color: '#39FF14', padding: '20px' }}>
       <h1>Retransmissor & TV de Sinalização</h1>
-      <p>Painel carregado com sucesso!</p>
-      {/* TODO O SEU CÓDIGO ORIGINAL DEVE SER COLADO AQUI */}
+      
+      {/* ADICIONE ESTE BLOCO ABAIXO PARA TESTAR */}
+      <div style={{ border: '2px solid red', padding: '20px', marginTop: '20px' }}>
+        <h2 style={{ color: 'white' }}>TESTE DE RENDERIZAÇÃO</h2>
+        <p>Se você vê este texto, o componente está carregando!</p>
+      </div>
+      {/* ------------------------------------- */}
+      
     </div>
   );
 };
