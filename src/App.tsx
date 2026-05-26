@@ -5,7 +5,7 @@ import { getDatabase, ref, onValue, set } from "firebase/database";
 
 // 1. CONFIGURAÇÃO (Substitua pela URL do seu Firebase)
 const firebaseConfig = {
-  databaseURL: "SUA_URL_DO_REALTIME_DATABASE_AQUI"
+  databaseURL: "https://sarahtvlan-default-rtdb.firebaseio.com/"
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
