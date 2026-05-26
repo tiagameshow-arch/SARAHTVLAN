@@ -9,7 +9,6 @@
   "react-player": "^2.13.0", // Essencial para rodar o YouTube na TV
   "react-router-dom": "^6.16.0", // Essencial para que /controle e /M10Café funcionem
   "react-scripts": "5.0.1"
-},
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
