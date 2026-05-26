@@ -206,3 +206,33 @@ const styles = {
     paddingTop: '10px',
   }
 };
+import { getDatabase, ref, onValue } from "firebase/database";
+import ReactPlayer from 'react-player/youtube'; // Instale: npm install react-player
+
+// ... dentro do componente da TV ...
+
+useEffect(() => {
+  const db = getDatabase();
+  // Escuta o caminho específico deste monitor no Firebase
+  const monitorRef = ref(db, `monitores/monitor1`);
+  onValue(monitorRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.urlVideo) {
+      // Quando o link do vídeo mudar, o player carrega o novo vídeo
+      setUrlAtual(data.urlVideo);
+    }
+  });
+}, []);
+
+return (
+  <div style={{ height: '100vh', width: '100vw' }}>
+    <ReactPlayer
+      url={urlAtual}
+      playing // Reproduz automaticamente
+      loop // Repete o vídeo
+      controls={false} // Esconde os controles do YouTube
+      width='100%'
+      height='100%'
+    />
+  </div>
+);
