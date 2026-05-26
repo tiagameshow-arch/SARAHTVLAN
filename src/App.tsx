@@ -1,93 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, set } from "firebase/database";
 
-// --- COMPONENTE: A TELA DA TV (O que o público vê) ---
-const TelaTV = () => {
-  const [mensagem, setMensagem] = useState("AGUARDANDO SINAL...");
-  const [corFundo, setCorFundo] = useState("#000");
+// 1. CONFIGURAÇÃO (Cole os dados do seu painel Firebase aqui)
+const firebaseConfig = {
+  databaseURL: "SUA_URL_DO_REALTIME_DATABASE_AQUI"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  // Aqui no futuro conectaremos o Firebase para mudar o estado sozinho
+// --- TELA DO MONITOR (TV) ---
+const MonitorTV = () => {
+  const [status, setStatus] = useState({ mensagem: "AGUARDANDO SINAL...", cor: "#333" });
+
+  useEffect(() => {
+    const statusRef = ref(db, 'statusTV');
+    onValue(statusRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) setStatus(data);
+    });
+  }, []);
+
   return (
-    <div style={{ 
-      background: corFundo, 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      justifyContent: 'center', 
-      alignItems: 'center',
-      color: '#39FF14',
-      transition: 'all 0.5s ease'
-    }}>
-      <h2 style={{ fontSize: '20px', opacity: 0.5 }}>RETRANSMISSOR ATIVO</h2>
-      <h1 style={{ fontSize: '60px', textAlign: 'center' }}>{mensagem}</h1>
+    <div style={{ background: status.cor, height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '50px' }}>
+      {status.mensagem}
     </div>
   );
 };
 
-// --- COMPONENTE: O PAINEL DE CONTROLE (O que você usa) ---
+// --- PAINEL DE CONTROLE (Admin) ---
 const PainelControle = () => {
-  return (
-    <div style={{ padding: '30px', background: '#1a1a1a', minHeight: '100vh', color: 'white' }}>
-      <h1>🎛️ CONTROLE DE TRANSMISSÃO</h1>
-      <hr />
-      
-      <div style={{ marginTop: '20px', display: 'grid', gap: '10px' }}>
-        <h3>Comandos de Tela:</h3>
-        <button style={btnStyle} onClick={() => alert('Enviando: TRANSMISSÃO AO VIVO')}>🔴 ENTRAR AO VIVO</button>
-        <button style={btnStyle} onClick={() => alert('Enviando: PLAYLIST MUSICAL')}>🎵 ATIVAR PLAYLIST</button>
-        <button style={{...btnStyle, background: 'red'}} onClick={() => alert('Enviando: FORA DO AR')}>⚠️ DESLIGAR SINAL</button>
-      </div>
+  const enviarComando = (msg, cor) => {
+    set(ref(db, 'statusTV'), { mensagem: msg, cor: cor });
+  };
 
-      <div style={{ marginTop: '40px', padding: '10px', background: '#333' }}>
-        <p>Link da TV: <code>sarahtvlan.vercel.app/</code></p>
-      </div>
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1>Painel de Controle</h1>
+      <button onClick={() => enviarComando("AO VIVO", "green")} style={{ padding: '20px', marginRight: '10px' }}>AO VIVO</button>
+      <button onClick={() => enviarComando("INTERVALO", "orange")} style={{ padding: '20px' }}>INTERVALO</button>
+      <button onClick={() => enviarComando("FORA DO AR", "red")} style={{ padding: '20px', marginLeft: '10px' }}>DESLIGAR</button>
     </div>
   );
 };
 
-// Estilo simples para os botões do controle
-const btnStyle = {
-  padding: '15px',
-  fontSize: '18px',
-  background: '#39FF14',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold'
-};
-
-// --- COMPONENTE PRINCIPAL (Roteador) ---
 export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<TelaTV />} />
+        <Route path="/" element={<MonitorTV />} />
         <Route path="/controle" element={<PainelControle />} />
       </Routes>
     </Router>
   );
 }
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set } from "firebase/database";
-
-// Substitua com as credenciais que o Firebase te der
-const firebaseConfig = {
-  databaseURL: "https://sarahtvlan-default-rtdb.firebaseio.com/"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// --- DENTRO DA TELA DA TV (Onde lê o dado) ---
-useEffect(() => {
-  const statusRef = ref(db, 'statusTV');
-  onValue(statusRef, (snapshot) => {
-    const data = snapshot.val();
-    setMensagem(data.mensagem);
-  });
-}, []);
-
-// --- DENTRO DO PAINEL DE CONTROLE (Onde escreve o dado) ---
-const enviarComando = (novaMensagem) => {
-  set(ref(db, 'statusTV'), { mensagem: novaMensagem });
-};
