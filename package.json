@@ -2,13 +2,14 @@
   "name": "sarahtvlan",
   "version": "1.0.0",
   "private": true,
-  "dependencies": {
-    "firebase": "^10.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-player": "^2.13.0",
-    "react-router-dom": "^6.20.1",
-    "vite": "^5.0.0"
+ "dependencies": {
+  "firebase": "^10.0.0", // Versão recente do Firebase
+  "react": "^18.2.0",
+  "react-dom": "^18.2.0",
+  "react-player": "^2.13.0", // Essencial para o YouTube rodar
+  "react-router-dom": "^6.16.0", // Essencial para as URLs /controle e /M10Café
+  "react-scripts": "5.0.1"
+},
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
