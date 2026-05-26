@@ -184,3 +184,11 @@ const styles = {
     paddingTop: '10px',
   }
 };
+// Exemplo de como vamos estruturar o estado no Firebase para cada monitor
+const [monitorData, setMonitorData] = useState({
+  id: 'monitor1',
+  nome: 'Monitor Principal',
+  playlist: [/* lista de links */],
+  config: { volume: 50, orientacao: 'horizontal' },
+  abaAtiva: 'telas' // 'telas', 'playlist' ou 'ajustes'
+});
