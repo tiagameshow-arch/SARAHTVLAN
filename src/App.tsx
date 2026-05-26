@@ -1,55 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set } from "firebase/database";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
-// 1. CONFIGURAÇÃO (Cole os dados do seu painel Firebase aqui)
-const firebaseConfig = {
-  databaseURL: "SUA_URL_DO_REALTIME_DATABASE_AQUI"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// --- TELA DO MONITOR (TV) ---
+// 1. COMPONENTE DA TV (O que o monitor exibe)
 const MonitorTV = () => {
-  const [status, setStatus] = useState({ mensagem: "AGUARDANDO SINAL...", cor: "#333" });
-
-  useEffect(() => {
-    const statusRef = ref(db, 'statusTV');
-    onValue(statusRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setStatus(data);
-    });
-  }, []);
-
   return (
-    <div style={{ background: status.cor, height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '50px' }}>
-      {status.mensagem}
+    <div style={{ background: '#000', height: '100vh', color: '#39FF14', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '40px' }}>
+      📺 TELA DA TV (Monitor)
     </div>
   );
 };
 
-// --- PAINEL DE CONTROLE (Admin) ---
+// 2. COMPONENTE DO CONTROLE (O seu painel)
 const PainelControle = () => {
-  const enviarComando = (msg, cor) => {
-    set(ref(db, 'statusTV'), { mensagem: msg, cor: cor });
-  };
-
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Painel de Controle</h1>
-      <button onClick={() => enviarComando("AO VIVO", "green")} style={{ padding: '20px', marginRight: '10px' }}>AO VIVO</button>
-      <button onClick={() => enviarComando("INTERVALO", "orange")} style={{ padding: '20px' }}>INTERVALO</button>
-      <button onClick={() => enviarComando("FORA DO AR", "red")} style={{ padding: '20px', marginLeft: '10px' }}>DESLIGAR</button>
+    <div style={{ padding: '30px', background: '#333', minHeight: '100vh', color: '#fff' }}>
+      <h1>🎛️ PAINEL DE CONTROLE</h1>
+      <p>Use os botões abaixo para mudar a TV.</p>
+      {/* SEUS BOTÕES DO FIREBASE VÃO AQUI */}
     </div>
   );
 };
 
+// 3. O ROTEADOR QUE SEPARA OS CAMINHOS
 export default function App() {
   return (
     <Router>
       <Routes>
+        {/* Este é o caminho da TV (Página Inicial) */}
         <Route path="/" element={<MonitorTV />} />
+        
+        {/* Este é o caminho do CONTROLE (Admin) */}
         <Route path="/controle" element={<PainelControle />} />
       </Routes>
     </Router>
