@@ -24,18 +24,9 @@ const InterfaceControle = () => {
 };
 
 export default function App() {
-  const [isControle, setIsControle] = useState(false);
-
-  useEffect(() => {
-    // Verifica se a URL termina em /controle
-    if (window.location.pathname.endsWith('/controle')) {
-      setIsControle(true);
-    }
-  }, []);
-
   return (
-    <>
-      {isControle ? <InterfaceControle /> : <PainelPrincipal />}
-    </>
-  );
+    <div className="app-container">
+       <PainelPrincipal /> {/* Verifique se este componente está exportado corretamente */}
+    </div>
+  )
 }
