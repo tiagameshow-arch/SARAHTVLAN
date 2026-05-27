@@ -11,6 +11,7 @@ export interface MonitorState {
   currentVideoIndex: number;
   isPlaying: boolean;
   mute: boolean;
+  orientation?: "landscape" | "portrait";
 }
 
 export interface TVState {

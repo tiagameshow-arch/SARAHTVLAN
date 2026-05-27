@@ -18,6 +18,7 @@ interface MonitorState {
   currentVideoIndex: number;
   isPlaying: boolean;
   mute: boolean;
+  orientation?: "landscape" | "portrait";
 }
 
 interface TVState {
@@ -44,7 +45,8 @@ let tvState: TVState = {
       playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false
+      mute: false,
+      orientation: "landscape"
     },
     {
       id: "plataforma-a",
@@ -52,7 +54,8 @@ let tvState: TVState = {
       playlist: ["_eH8u94IkyY", "ysz5S6PUM-U"],
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false
+      mute: false,
+      orientation: "landscape"
     },
     {
       id: "plataforma-b",
@@ -60,7 +63,8 @@ let tvState: TVState = {
       playlist: ["5gK9m6W-i8E", "S_dfq9rFWAE"],
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false
+      mute: false,
+      orientation: "landscape"
     }
   ],
   updatedAt: new Date().toISOString()

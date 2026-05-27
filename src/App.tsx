@@ -194,6 +194,23 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           playerRef.current.mute();
         } else {
           playerRef.current.unMute();
+          // Force make sure it plays!
+          if (typeof playerRef.current.playVideo === "function") {
+            playerRef.current.playVideo();
+          }
+          // Autoplay block fallback for on-the-fly unmute:
+          setTimeout(() => {
+            if (!playerRef.current) return;
+            try {
+              const state = playerRef.current.getPlayerState();
+              // Try to find if player got paused (state 2) or stuck because of browser audio-autoplay rules
+              if (state !== 1 && state !== 3) {
+                console.log("Detecting post-unmute browser blockage. Re-muting to resume video safely...");
+                playerRef.current.mute();
+                playerRef.current.playVideo();
+              }
+            } catch (err) {}
+          }, 450);
         }
       } catch (e) {
         // ignore
@@ -872,6 +889,16 @@ export default function App() {
     syncMonitorsToServer(updated);
   };
 
+  const handleToggleOrientation = (monitorId: string) => {
+    const updated = tvState.monitors.map(m => {
+      if (m.id === monitorId) {
+        return { ...m, orientation: m.orientation === "portrait" ? "landscape" : "portrait" };
+      }
+      return m;
+    });
+    syncMonitorsToServer(updated);
+  };
+
   const handleCreateMonitor = (e: FormEvent) => {
     e.preventDefault();
     if (!newMonitorNameInput.trim()) return;
@@ -1056,8 +1083,16 @@ export default function App() {
             </div>
 
             {/* Right Layer: Physical TV Frame with Stream */}
-            <div className="flex-grow flex flex-col items-center w-full max-w-[960px]">
-              <div className="relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl aspect-video overflow-hidden w-full flex flex-col justify-between items-stretch">
+            <div className={`flex flex-col items-center w-full transition-all duration-300 ${
+              monitorObj.orientation === "portrait"
+                ? "max-w-[420px]"
+                : "flex-grow max-w-[960px]"
+            }`}>
+              <div className={`relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden w-full flex flex-col justify-between items-stretch transition-all duration-300 ${
+                monitorObj.orientation === "portrait"
+                  ? "aspect-[9/16]"
+                  : "aspect-video"
+              }`}>
                 
                 {/* Simulated Screen Header */}
                 <div className="relative w-full h-8 bg-black/75 backdrop-blur-sm border-b border-white/10 px-3 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
@@ -1442,7 +1477,11 @@ export default function App() {
                           </div>
 
                           {/* Widescreen Simulated Physical TV Frame with dynamic controls */}
-                          <div className="relative bg-[#050505] border-[11px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl aspect-video overflow-hidden w-[340px] sm:w-[560px] md:w-[690px] lg:w-[780px] xl:w-[910px] flex flex-col justify-between items-stretch">
+                          <div className={`relative bg-[#050505] border-[11px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden flex flex-col justify-between items-stretch transition-all duration-300 ${
+                            activeMonitorObj.orientation === "portrait"
+                              ? "aspect-[9/16] w-[220px] sm:w-[320px] md:w-[360px] lg:w-[410px] xl:w-[460px]"
+                              : "aspect-video w-[340px] sm:w-[560px] md:w-[690px] lg:w-[780px] xl:w-[910px]"
+                          }`}>
                             
                             {/* Inner Translucent Header on Simulated TV Screen */}
                             <div className="relative w-full h-11 bg-black/85 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
@@ -1983,11 +2022,15 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    setPassengerScreenSlide(prev => prev === "weather" ? "transit" : "weather");
+                    if (activeMonitor) handleToggleOrientation(activeMonitor.id);
                   }}
-                  className="py-2 px-1 bg-stone-900 hover:bg-stone-850 border border-stone-850 text-stone-200 rounded-xl text-[9px] font-black flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-95 shadow-md font-sans"
+                  className={`py-2 px-1 rounded-xl border text-[9px] font-black flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-95 shadow-md font-sans ${
+                    activeMonitor?.orientation === "portrait"
+                      ? "bg-amber-950/90 border-[#e8a317] text-[#e8a317] shadow-[0_2px_8px_rgba(232,163,23,0.15)]"
+                      : "bg-stone-900 border-stone-850 text-stone-200 hover:bg-stone-850"
+                  }`}
                 >
-                  <Smartphone className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+                  <Smartphone className={`w-3.5 h-3.5 ${activeMonitor?.orientation === "portrait" ? "text-amber-400 rotate-90" : "text-stone-400"} transition-transform duration-300`} />
                   <span className="tracking-wide uppercase font-sans leading-none">VIRAR TELA</span>
                 </button>
               </div>
