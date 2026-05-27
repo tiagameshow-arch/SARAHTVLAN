@@ -32,7 +32,8 @@ import {
   ListMusic,
   PlusCircle,
   Laptop,
-  FileVideo
+  FileVideo,
+  QrCode
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { BusLine, TVState, MonitorState } from "./types";
@@ -225,8 +226,26 @@ export default function App() {
   const [passengerScreenSlide, setPassengerScreenSlide] = useState<"weather" | "transit">("weather");
 
   // URL mode selector (supports full-screen preview modes: TV standalone or passenger phone standalone)
-  const [urlMode, setUrlMode] = useState<string | null>(null);
-  const [urlMonitorId, setUrlMonitorId] = useState<string | null>(null);
+  const [urlMode, setUrlMode] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      const m = params.get("mode");
+      if (m) return m;
+      if (hash === "#control" || hash === "#remote") return "control";
+      if (hash === "#monitor" || hash === "#tv") return "tv";
+      if (hash === "#passenger") return "passenger";
+    }
+    return null;
+  });
+  const [urlMonitorId, setUrlMonitorId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("monitor");
+    }
+    return null;
+  });
+  const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
 
   // Custom positioning, scaling and room background controls for ABA 2
   const [tvX, setTvX] = useState<number>(30);
@@ -239,9 +258,27 @@ export default function App() {
   const [showConfigPanel, setShowConfigPanel] = useState<boolean>(true);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setUrlMode(params.get("mode"));
-    setUrlMonitorId(params.get("monitor"));
+    const handleUrlState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      const m = params.get("mode");
+      if (m) {
+        setUrlMode(m);
+      } else if (hash === "#control" || hash === "#remote") {
+        setUrlMode("control");
+      } else if (hash === "#monitor" || hash === "#tv") {
+        setUrlMode("tv");
+      } else if (hash === "#passenger") {
+        setUrlMode("passenger");
+      } else {
+        setUrlMode(null);
+      }
+      setUrlMonitorId(params.get("monitor"));
+    };
+
+    handleUrlState();
+    window.addEventListener("hashchange", handleUrlState);
+    return () => window.removeEventListener("hashchange", handleUrlState);
   }, []);
 
   // Synchronized state with the mock node/express server with LocalStorage backup
@@ -1029,10 +1066,35 @@ export default function App() {
                           className="absolute inset-0 w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="absolute inset-0 bg-stone-950/95 flex flex-col items-center justify-center text-center p-4 text-stone-400 font-mono select-auto pointer-events-auto">
-                          <FileVideo className="w-8 h-8 text-yellow-500 mb-2 animate-bounce" />
-                          <p className="text-[10px] font-bold uppercase text-white">VÍDEO DO SEU PC</p>
-                          <p className="text-[8px] text-stone-550 max-w-xs mt-1">Carregue o arquivo de vídeo no painel para reproduzir standalone.</p>
+                        <div className="absolute inset-0 bg-stone-950/95 flex flex-col items-center justify-center text-center p-4 text-stone-400 font-mono select-auto pointer-events-auto z-30">
+                          <FileVideo className="w-8 h-8 text-yellow-500 mb-2 animate-pulse" />
+                          <p className="text-[11px] font-bold uppercase text-white tracking-wider">VÍDEO LOCAL REQUERIDO</p>
+                          <p className="text-[9px] text-stone-300 max-w-xs mt-1 leading-normal">
+                            Este monitor está programado para exibir um vídeo local do PC. Selecione o arquivo de vídeo correspondente (.MP4) neste dispositivo para iniciar a transmissão:
+                          </p>
+                          
+                          <div className="mt-3 relative">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const url = URL.createObjectURL(file);
+                                  setLocalVideos(prev => ({
+                                    ...prev,
+                                    [currentVidId]: { name: file.name, url }
+                                  }));
+                                }
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            />
+                            <button className="px-4 py-2 bg-gradient-to-r from-yellow-500/90 to-amber-600/90 hover:from-yellow-400 hover:to-amber-500 border border-yellow-300/30 text-stone-950 font-black text-[9px] rounded-xl flex items-center gap-1.5 uppercase transition-all duration-150 cursor-pointer shadow-md">
+                              Selecionar Arquivo .MP4
+                            </button>
+                          </div>
+                          
+                          <p className="text-[7.5px] text-stone-500 mt-2">ID do Slot: {currentVidId}</p>
                         </div>
                       )
                     ) : currentVidId.startsWith("vdoninja-") ? (
@@ -1104,6 +1166,16 @@ export default function App() {
       <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-[340px]">
           {renderPassengerPhone()}
+        </div>
+      </div>
+    );
+  }
+
+  if (urlMode === "remote" || urlMode === "control") {
+    return (
+      <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-[340px]">
+          {renderRemotePhone()}
         </div>
       </div>
     );
@@ -1200,11 +1272,11 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.25 }}
-              className="flex flex-col items-center justify-center py-4 w-full"
+              className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-12 w-full py-4"
             >
-              {/* Center Stage Controller Frame */}
+              {/* Left Column: Center Stage Controller Frame */}
               <div className="w-full max-w-[340px] relative">
-                <div className="flex justify-between items-center px-1 mb-2">
+                <div className="flex justify-between items-center px-1 mb-3">
                   <span className="text-[10px] font-mono text-stone-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <Smartphone className="w-3.5 h-3.5 text-emerald-400" /> CONTROLE TÁTIL DE OSASCO
                   </span>
@@ -1220,6 +1292,68 @@ export default function App() {
                 </div>
                 
                 {renderRemotePhone()}
+              </div>
+
+              {/* Right Column: Mobile pairing instructions & stand-alone checkout controller */}
+              <div id="mobile-control-pairing-card" className="bg-[#0c140f] border border-[#10b981]/15 rounded-3xl p-6 w-full max-w-[340px] shadow-2xl flex flex-col gap-5 text-left select-none relative overflow-hidden transition-all duration-300">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                
+                <div>
+                  <h3 className="text-white font-display text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <QrCode className="w-5 h-5 text-emerald-400" />
+                    Controle no Celular
+                  </h3>
+                  <p className="text-stone-400 text-[11px] leading-relaxed mt-1.5">
+                    Escaneie o QR Code ou copie o link abaixo no seu celular para carregar a tela de controle cheia e exclusiva, sem o restante da página!
+                  </p>
+                </div>
+
+                {/* QR Code Canvas Representation using free public api */}
+                <div className="flex flex-col items-center bg-white p-3.5 rounded-2xl border border-white/5 self-center shadow-lg">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(window.location.origin + "/?mode=control")}`} 
+                    alt="QR Code de Pareamento do Controle"
+                    referrerPolicy="no-referrer"
+                    className="w-[130px] h-[130px]"
+                  />
+                  <span className="text-[8.5px] font-mono font-black text-stone-900 uppercase tracking-widest mt-2">{`>> LER NO CELULAR >>`}</span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/?mode=control`);
+                      setCopyFeedback(true);
+                      setTimeout(() => setCopyFeedback(false), 2000);
+                    }}
+                    className="w-full py-2.5 bg-emerald-950/80 hover:bg-emerald-900/95 border border-emerald-500/25 text-emerald-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition duration-150 active:scale-95 cursor-pointer"
+                  >
+                    {copyFeedback ? (
+                      <span className="flex items-center gap-1">✓ Copiado com Sucesso!</span>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copiar Link do Controle</span>
+                      </>
+                    )}
+                  </button>
+
+                  <a
+                    href={`${window.location.origin}/?mode=control`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border border-emerald-400/30 text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition duration-150 text-center active:scale-95"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-white" />
+                    Abrir Isolado em Nova Aba ↗
+                  </a>
+                </div>
+
+                <div className="border-t border-emerald-500/10 pt-3.5 flex flex-col gap-1 font-mono text-[9px] text-stone-400 text-center">
+                  <span>SARAHTVLAN REMOTE CONTROL HUB</span>
+                  <span className="text-[8px] text-[#10b981] animate-pulse">Sincronização em tempo real online</span>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1343,10 +1477,35 @@ export default function App() {
                                     className="absolute inset-0 w-full h-full object-cover"
                                   />
                                 ) : (
-                                  <div className="absolute inset-0 bg-stone-950/95 flex flex-col items-center justify-center text-center p-4 text-stone-400 font-mono select-auto pointer-events-auto">
-                                    <FileVideo className="w-8 h-8 text-yellow-500 mb-2 animate-bounce" />
-                                    <p className="text-[10px] font-bold uppercase text-white">VÍDEO DO SEU PC</p>
-                                    <p className="text-[8px] text-stone-550 max-w-xs mt-1">Carregue o arquivo abaixo ou no painel esquerdo para reproduzir na simulação.</p>
+                                  <div className="absolute inset-0 bg-stone-950/95 flex flex-col items-center justify-center text-center p-4 text-stone-400 font-mono select-auto pointer-events-auto z-30">
+                                    <FileVideo className="w-8 h-8 text-yellow-500 mb-2 animate-pulse" />
+                                    <p className="text-[11px] font-bold uppercase text-white tracking-wider">VÍDEO LOCAL REQUERIDO</p>
+                                    <p className="text-[9px] text-stone-300 max-w-xs mt-1 leading-normal">
+                                      Este monitor está programado para exibir um vídeo local do PC. Selecione o arquivo de vídeo correspondente (.MP4) neste dispositivo para iniciar a simulação:
+                                    </p>
+                                    
+                                    <div className="mt-3 relative">
+                                      <input
+                                        type="file"
+                                        accept="video/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            const url = URL.createObjectURL(file);
+                                            setLocalVideos(prev => ({
+                                              ...prev,
+                                              [activeVideoId]: { name: file.name, url }
+                                            }));
+                                          }
+                                        }}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                      />
+                                      <button className="px-4 py-2 bg-gradient-to-r from-yellow-500/90 to-amber-600/90 hover:from-yellow-400 hover:to-amber-500 border border-yellow-300/30 text-stone-950 font-black text-[9px] rounded-xl flex items-center gap-1.5 uppercase transition-all duration-150 cursor-pointer shadow-md">
+                                        Selecionar Arquivo .MP4
+                                      </button>
+                                    </div>
+                                    
+                                    <p className="text-[7.5px] text-stone-550 mt-2">ID do Slot: {activeVideoId}</p>
                                   </div>
                                 )
                               ) : activeVideoId.startsWith("vdoninja-") ? (
