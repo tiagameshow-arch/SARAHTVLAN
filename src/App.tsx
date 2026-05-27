@@ -240,18 +240,25 @@ export default function App() {
   });
   const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
 
-  // Auto-generate a stable dynamic monitor ID per session if none is provided in the URL query parameters
+  // Auto-generate a stable dynamic monitor ID per device/PC if none is provided in the URL query parameters
   const [sessionMonitorId, setSessionMonitorId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlMon = params.get("monitor");
-      if (urlMon) return urlMon;
+      
+      // If the parameter is a configured static monitor, we honor it.
+      const staticMonitors = ["terminal-principal", "plataforma-a", "plataforma-b"];
+      if (urlMon && staticMonitors.includes(urlMon)) {
+        return urlMon;
+      }
 
-      const stored = sessionStorage.getItem("tv_instance_monitor_id");
+      // For dynamic TV monitors, we use a locker in localStorage so it stays perfectly 
+      // persistent for that specific physical computer/machine, even if we restart the browser or copy the URL!
+      const stored = localStorage.getItem("tv_instance_monitor_unique_id");
       if (stored) return stored;
 
       const newId = "tv-" + Math.floor(100 + Math.random() * 900);
-      sessionStorage.setItem("tv_instance_monitor_id", newId);
+      localStorage.setItem("tv_instance_monitor_unique_id", newId);
       return newId;
     }
     return "terminal-principal";
@@ -1070,6 +1077,11 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-white text-xs md:text-sm font-mono tracking-widest font-black uppercase">SINAL ATIVO: {monitorObj.name}</span>
+            {monitorObj.ip && (
+              <span className="text-[10px] font-mono font-bold bg-white/10 text-stone-200 border border-white/15 px-2 py-0.5 rounded-lg ml-2 shrink-0">
+                IP: {monitorObj.ip}
+              </span>
+            )}
           </div>
           
           {/* Rightside: Elegant Electronic Digital Clock */}
@@ -1689,8 +1701,15 @@ export default function App() {
           <span className="text-[8px] font-mono font-bold text-emerald-500/70 uppercase block tracking-widest leading-none">
             GERENCIAMENTO INDIVIDUAL
           </span>
-          <div className="text-xs sm:text-sm font-sans font-black text-white truncate uppercase tracking-tight mt-1 shadow-sm font-display leading-tight">
-            {activeMonitor ? activeMonitor.name : "NENHUM DETECTADO"}
+          <div className="flex justify-between items-start mt-1">
+            <div className="text-xs sm:text-sm font-sans font-black text-white truncate uppercase tracking-tight shadow-sm font-display leading-tight">
+              {activeMonitor ? activeMonitor.name : "NENHUM DETECTADO"}
+            </div>
+            {activeMonitor?.ip && (
+              <span className="text-[7.5px] font-mono font-bold bg-emerald-950/80 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/15 shrink-0 ml-1.5">
+                IP: {activeMonitor.ip}
+              </span>
+            )}
           </div>
           <div className="flex justify-between items-center text-[8px] font-mono text-stone-300 mt-2.5 border-t border-emerald-500/10 pt-1.5">
             <span className="bg-[#0b1b11] border border-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-400 font-black">
@@ -1751,8 +1770,15 @@ export default function App() {
                     className={`w-full p-2 rounded-xl text-left border cursor-pointer transition-all duration-150 flex items-center justify-between active:scale-98 ${isSelected ? 'bg-yellow-400 border-yellow-500 text-stone-950 shadow-[0_3px_8px_rgba(250,204,21,0.25)]' : 'bg-stone-950 border-stone-850 text-stone-300 hover:bg-stone-900/50'}`}
                   >
                     <div className="flex items-center gap-2 truncate pr-1">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSelected ? 'bg-stone-950 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
-                      <span className="text-[10px] font-black truncate max-w-[155px] uppercase font-mono">{m.name}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-0.5 ${isSelected ? 'bg-stone-950 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
+                      <div className="flex flex-col truncate">
+                        <span className="text-[10px] font-black truncate max-w-[155px] uppercase font-mono leading-tight">{m.name}</span>
+                        {m.ip && (
+                          <span className={`text-[7.5px] font-mono leading-none mt-0.5 font-bold ${isSelected ? 'text-stone-800' : 'text-stone-500'}`}>
+                            IP: {m.ip}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>

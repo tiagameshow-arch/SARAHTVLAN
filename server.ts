@@ -19,6 +19,7 @@ interface MonitorState {
   isPlaying: boolean;
   mute: boolean;
   orientation?: "landscape" | "portrait";
+  ip?: string;
 }
 
 interface TVState {
@@ -182,6 +183,11 @@ async function startServer() {
       return res.status(400).json({ error: "Missing monitor id" });
     }
 
+    let clientIp = (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "127.0.0.1").split(",")[0].trim();
+    if (clientIp.startsWith("::ffff:")) {
+      clientIp = clientIp.substring(7);
+    }
+
     const now = Date.now();
     monitorActivity[id] = now;
 
@@ -203,18 +209,23 @@ async function startServer() {
         currentVideoIndex: 0,
         isPlaying: true,
         mute: true,
-        orientation: orientation || "landscape"
+        orientation: orientation || "landscape",
+        ip: clientIp
       };
 
       tvState.monitors.push(newMonitor);
       changed = true;
-      console.log(`[Presence] Novo monitor registrado dinamicamente por ping: ${id}`);
+      console.log(`[Presence] Novo monitor registrado dinamicamente por ping (${clientIp}): ${id}`);
     } else {
       // Sync parameters if passed
       const monitor = tvState.monitors[existingIndex];
       // Keep orientation in sync if provided
       if (orientation && monitor.orientation !== orientation) {
         monitor.orientation = orientation;
+        changed = true;
+      }
+      if (monitor.ip !== clientIp) {
+        monitor.ip = clientIp;
         changed = true;
       }
     }

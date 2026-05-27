@@ -12,6 +12,7 @@ export interface MonitorState {
   isPlaying: boolean;
   mute: boolean;
   orientation?: "landscape" | "portrait";
+  ip?: string;
 }
 
 export interface TVState {
