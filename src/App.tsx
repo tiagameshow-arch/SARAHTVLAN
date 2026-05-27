@@ -246,14 +246,15 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const urlMon = params.get("monitor");
       
-      // If the parameter is a configured static monitor, we honor it.
-      const staticMonitors = ["terminal-principal", "plataforma-a", "plataforma-b"];
-      if (urlMon && staticMonitors.includes(urlMon)) {
+      // 1. If an explicit monitor parameter is provided in the URL, we honor it.
+      // This is crucial so that you can open a specific monitor link on another computer!
+      if (urlMon) {
         return urlMon;
       }
 
-      // For dynamic TV monitors, we use a locker in localStorage so it stays perfectly 
-      // persistent for that specific physical computer/machine, even if we restart the browser or copy the URL!
+      // 2. For dynamic TV monitors opened without parameters, we use a locker in localStorage
+      // so it stays perfectly unique and persistent for that specific physical computer/machine,
+      // even if we restart the browser! This prevents multiple computers on the same IP from clashing.
       const stored = localStorage.getItem("tv_instance_monitor_unique_id");
       if (stored) return stored;
 
@@ -1823,6 +1824,52 @@ export default function App() {
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </form>
+            </div>
+
+            {/* Active Monitor Connection & Direct Linking Helper */}
+            <div className="border-t border-stone-900/40 pt-2.5 mt-2 flex flex-col gap-1.5 bg-black/45 p-2 rounded-xl border border-stone-900/40">
+              <span className="text-[7.5px] font-mono font-bold text-amber-400 uppercase tracking-widest text-center flex items-center justify-center gap-1">
+                <ExternalLink className="w-2.5 h-2.5" />
+                VINCULAR NO OUTRO PC OU TV
+              </span>
+              <p className="text-[7px] text-stone-400 leading-tight text-center">
+                Selecione o monitor acima, abra o link específico ou escaneie o QR Code abaixo no outro computador/TV física:
+              </p>
+              
+              <div className="bg-white p-1 rounded-lg self-center shadow-inner mt-0.5">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + "/?mode=tv&monitor=" + selectedMonitorId)}`} 
+                  alt="QR Code do Sinal"
+                  referrerPolicy="no-referrer"
+                  className="w-[70px] h-[70px] block"
+                />
+              </div>
+
+              <div className="flex gap-1 mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const l = `${window.location.origin}/?mode=tv&monitor=${selectedMonitorId}`;
+                    navigator.clipboard.writeText(l);
+                    alert(`Link para o monitor "${activeMonitor?.name}" copiado com sucesso! Abra este link no outro PC.`);
+                  }}
+                  className="flex-grow py-1 bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-300 font-bold rounded-lg text-[8px] flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer"
+                >
+                  <Copy className="w-2.5 h-2.5 text-stone-400" />
+                  Copiar Link
+                </button>
+                <a
+                  href={`${window.location.origin}/?mode=tv&monitor=${selectedMonitorId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-stone-950 font-black rounded-lg text-[8px] flex items-center justify-center gap-1 transition active:scale-95 text-center"
+                >
+                  Abrir ↗
+                </a>
+              </div>
+              <div className="text-[6.5px] font-mono text-stone-500 leading-tight text-center mt-0.5">
+                * Para telas independentes mesmo com o mesmo IP da Wi-Fi familiar/comercial!
+              </div>
             </div>
           </div>
         )}
