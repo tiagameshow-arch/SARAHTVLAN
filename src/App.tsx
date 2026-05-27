@@ -93,16 +93,37 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           showinfo: 0,
           fs: 0,
           disablekb: 1,
+          playsinline: 1,
         },
         events: {
           onReady: (event: any) => {
             if (active && event.target) {
-              event.target.playVideo();
-              if (mute) {
-                event.target.mute();
-              } else {
-                event.target.unMute();
+              try {
+                // Pre-configure audio mode
+                if (mute) {
+                  event.target.mute();
+                } else {
+                  event.target.unMute();
+                }
+                event.target.playVideo();
+              } catch (e) {
+                console.warn("Retrying playVideo:", e);
               }
+
+              // Robust browser autoplay block fallback:
+              setTimeout(() => {
+                if (!active || !event.target) return;
+                try {
+                  const state = event.target.getPlayerState();
+                  // State -1 = unstarted, 2 = paused, 0 = ended, 5 = cued
+                  // If browser keeps it paused because it blocks audio autoplay, force mute and auto-start
+                  if (state !== 1 && state !== 3) {
+                    console.log("Detecting autoplay blockage. Activating muted transmission fallback...");
+                    event.target.mute();
+                    event.target.playVideo();
+                  }
+                } catch (err) {}
+              }, 600);
             }
           },
           onStateChange: (event: any) => {
@@ -1055,7 +1076,7 @@ export default function App() {
                 {/* Simulated Screen Video Body */}
                 <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
                   {currentVidId ? (
-                    currentVidId.startsWith("local-") ? (
+                    false ? (
                       localVideos[currentVidId] ? (
                         <video
                           src={localVideos[currentVidId]?.url}
@@ -1466,7 +1487,7 @@ export default function App() {
                           {/* Video area inside simulated screen, positioned between header and ticker */}
                           <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
                             {activeVideoId ? (
-                              activeVideoId.startsWith("local-") ? (
+                              false ? (
                                 localVideos[activeVideoId] ? (
                                   <video
                                     src={localVideos[activeVideoId]?.url}
@@ -1802,31 +1823,6 @@ export default function App() {
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
-            </div>
-
-            {/* Local MP4 Upload built directly inside the Playlist View */}
-            <div className="bg-stone-950/80 p-2 rounded-xl border border-dashed border-stone-850 flex flex-col items-center justify-center relative cursor-pointer hover:bg-stone-900/40 transition">
-              <input
-                type="file"
-                accept="video/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const id = `local-${Date.now()}`;
-                    const url = URL.createObjectURL(file);
-                    setLocalVideos(prev => ({
-                      ...prev,
-                      [id]: { name: file.name, url }
-                    }));
-                    handleAddVideo(activeMonitor.id, id);
-                  }
-                }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="flex items-center gap-1.5 text-stone-400">
-                <Laptop className="w-3 h-3 text-emerald-400" />
-                <span className="text-[8px] font-bold uppercase font-mono">Enviar .MP4 do Celular/PC</span>
-              </div>
             </div>
 
             {/* Tracklist layout for active monitor */}
