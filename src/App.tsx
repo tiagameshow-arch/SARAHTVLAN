@@ -338,22 +338,6 @@ export default function App() {
           currentVideoIndex: 0,
           isPlaying: true,
           mute: true
-        },
-        {
-          id: "plataforma-a",
-          name: "Plataforma A - Saídas Centro",
-          playlist: ["_eH8u94IkyY", "ysz5S6PUM-U"],
-          currentVideoIndex: 0,
-          isPlaying: true,
-          mute: true
-        },
-        {
-          id: "plataforma-b",
-          name: "Plataforma B - Linhas de Bairro",
-          playlist: ["5gK9m6W-i8E", "S_dfq9rFWAE"],
-          currentVideoIndex: 0,
-          isPlaying: true,
-          mute: true
         }
       ],
       updatedAt: new Date().toISOString()
@@ -1703,8 +1687,18 @@ export default function App() {
             GERENCIAMENTO INDIVIDUAL
           </span>
           <div className="flex justify-between items-start mt-1">
-            <div className="text-xs sm:text-sm font-sans font-black text-white truncate uppercase tracking-tight shadow-sm font-display leading-tight">
-              {activeMonitor ? activeMonitor.name : "NENHUM DETECTADO"}
+            <div className="text-xs sm:text-sm font-sans font-black text-white truncate uppercase tracking-tight shadow-sm font-display leading-tight flex flex-col gap-1">
+              <span>{activeMonitor ? activeMonitor.name : "NENHUM DETECTADO"}</span>
+              {activeMonitor && (() => {
+                const isOnline = activeMonitor.id === "terminal-principal" || activeMonitor.isOnline;
+                return (
+                  <span className={`text-[6.5px] font-mono font-bold uppercase tracking-widest px-1 py-0.5 rounded w-max ${
+                    isOnline ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/15 animate-pulse' : 'bg-stone-900 border border-stone-850/40 text-stone-500'
+                  }`}>
+                    {isOnline ? "● CONECTADO ONLINE" : "○ OFFLINE (RECONECTE)"}
+                  </span>
+                );
+              })()}
             </div>
             {activeMonitor?.ip && (
               <span className="text-[7.5px] font-mono font-bold bg-emerald-950/80 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/15 shrink-0 ml-1.5">
@@ -1761,6 +1755,7 @@ export default function App() {
             <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin mt-1">
               {tvState.monitors.map((m, idx) => {
                 const isSelected = selectedMonitorId === m.id;
+                const isOnline = m.id === "terminal-principal" || m.isOnline;
                 return (
                   <div
                     key={m.id}
@@ -1771,9 +1766,22 @@ export default function App() {
                     className={`w-full p-2 rounded-xl text-left border cursor-pointer transition-all duration-150 flex items-center justify-between active:scale-98 ${isSelected ? 'bg-yellow-400 border-yellow-500 text-stone-950 shadow-[0_3px_8px_rgba(250,204,21,0.25)]' : 'bg-stone-950 border-stone-850 text-stone-300 hover:bg-stone-900/50'}`}
                   >
                     <div className="flex items-center gap-2 truncate pr-1">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-0.5 ${isSelected ? 'bg-stone-950 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-0.5 ${
+                        isSelected 
+                          ? (isOnline ? 'bg-stone-950 animate-pulse' : 'bg-stone-950 opacity-40') 
+                          : (isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-stone-600')
+                      }`} />
                       <div className="flex flex-col truncate">
-                        <span className="text-[10px] font-black truncate max-w-[155px] uppercase font-mono leading-tight">{m.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black truncate max-w-[155px] uppercase font-mono leading-tight">{m.name}</span>
+                          {!isOnline && (
+                            <span className={`text-[6px] px-1 py-[1.5px] rounded tracking-wide leading-none font-bold ${
+                              isSelected ? 'bg-stone-950/20 text-stone-950/80 border border-stone-950/20' : 'bg-stone-900/40 text-stone-500 border border-stone-850/40'
+                            }`}>
+                              OFFLINE
+                            </span>
+                          )}
+                        </div>
                         {m.ip && (
                           <span className={`text-[7.5px] font-mono leading-none mt-0.5 font-bold ${isSelected ? 'text-stone-800' : 'text-stone-500'}`}>
                             IP: {m.ip}

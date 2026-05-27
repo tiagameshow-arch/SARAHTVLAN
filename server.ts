@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 
 // For ES modules path resolution
@@ -20,6 +21,7 @@ interface MonitorState {
   mute: boolean;
   orientation?: "landscape" | "portrait";
   ip?: string;
+  isOnline?: boolean;
 }
 
 interface TVState {
@@ -30,58 +32,69 @@ interface TVState {
   updatedAt: string;
 }
 
-// In-memory global state
-let tvState: TVState = {
-  temperature: "17°C - Nublado",
-  newsTicker: "NOTÍCIAS DE OSASCO: Novas melhorias de asfalto e sinalização chegam à Avenida Zumbi dos Palmares, no Parque Palmares! Linhas de ônibus integradas conectam o bairro ao centro de Osasco e estações de trem.",
-  busLines: [
-    { id: "1", line: "035", time: "7 MIN" },
-    { id: "2", line: "034", time: "15 MIN" },
-    { id: "3", line: "466", time: "30 MIN" }
-  ],
-  monitors: [
-    {
-      id: "terminal-principal",
-      name: "Monitor Principal - Terminal",
-      playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
-      currentVideoIndex: 0,
-      isPlaying: true,
-      mute: true,
-      orientation: "landscape"
-    },
-    {
-      id: "plataforma-a",
-      name: "Plataforma A - Saídas Centro",
-      playlist: ["_eH8u94IkyY", "ysz5S6PUM-U"],
-      currentVideoIndex: 0,
-      isPlaying: true,
-      mute: true,
-      orientation: "landscape"
-    },
-    {
-      id: "plataforma-b",
-      name: "Plataforma B - Linhas de Bairro",
-      playlist: ["5gK9m6W-i8E", "S_dfq9rFWAE"],
-      currentVideoIndex: 0,
-      isPlaying: true,
-      mute: true,
-      orientation: "landscape"
+const STATE_FILE_PATH = path.join(__dirname, "tv-state.json");
+
+// Helper to save the global state to tv-state.json
+function saveStateToDisk(state: TVState) {
+  try {
+    fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(state, null, 2), "utf8");
+  } catch (err) {
+    console.error("Erro salvando tv-state.json:", err);
+  }
+}
+
+// Helper to load or initialize state
+function loadStateFromDisk(): TVState {
+  try {
+    if (fs.existsSync(STATE_FILE_PATH)) {
+      const data = fs.readFileSync(STATE_FILE_PATH, "utf8");
+      const parsed = JSON.parse(data) as TVState;
+      if (parsed && Array.isArray(parsed.monitors) && parsed.monitors.length > 0) {
+        return parsed;
+      }
     }
-  ],
-  updatedAt: new Date().toISOString()
-};
+  } catch (err) {
+    console.error("Erro carregando tv-state.json, usando padrão:", err);
+  }
+
+  // Pure clean default state with only 1 main terminal monitor to avoid cluttering and unwanted default screens
+  return {
+    temperature: "17°C - Nublado",
+    newsTicker: "NOTÍCIAS DE OSASCO: Novas melhorias de asfalto e sinalização chegam à Avenida Zumbi dos Palmares, no Parque Palmares! Linhas de ônibus integradas conectam o bairro ao centro de Osasco e estações de trem.",
+    busLines: [
+      { id: "1", line: "035", time: "7 MIN" },
+      { id: "2", line: "034", time: "15 MIN" },
+      { id: "3", line: "466", time: "30 MIN" }
+    ],
+    monitors: [
+      {
+        id: "terminal-principal",
+        name: "Monitor Principal - Terminal",
+        playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
+        currentVideoIndex: 0,
+        isPlaying: true,
+        mute: true,
+        orientation: "landscape"
+      }
+    ],
+    updatedAt: new Date().toISOString()
+  };
+}
+
+// Load persisted state from disk, fallback to standard defaults if empty
+let tvState: TVState = loadStateFromDisk();
 
 // Monitor presence / dynamic connection tracking (id -> last active timestamp)
 let monitorActivity: Record<string, number> = {
-  "terminal-principal": Date.now(),
-  "plataforma-a": Date.now(),
-  "plataforma-b": Date.now()
+  "terminal-principal": Date.now()
 };
 
 // Subscriber connections for real-time updates (Server-Sent Events)
 let sseClients: any[] = [];
 
 function broadcastState() {
+  // Automatically write the latest state to server disk to persist any changes/additions/deletions!
+  saveStateToDisk(tvState);
   const data = JSON.stringify(tvState);
   sseClients.forEach((client) => {
     client.write(`data: ${data}\n\n`);
@@ -228,6 +241,10 @@ async function startServer() {
         monitor.ip = clientIp;
         changed = true;
       }
+      if (monitor.isOnline !== true) {
+        monitor.isOnline = true;
+        changed = true;
+      }
     }
 
     if (changed) {
@@ -267,31 +284,36 @@ async function startServer() {
   // Periodically fluctuate weather and rotate news items every 180 seconds
   const weatherNewsInterval = setInterval(updateWeatherAndNews, 180000);
 
-  // Connection manager: Remove monitors that haven't pinged in over 10 seconds
+  // Connection manager: Safe tracking of monitor online status without deleting screens or wiping playlists!
   const presenceInterval = setInterval(() => {
-    const cutoff = Date.now() - 10000;
+    const cutoff = Date.now() - 15000; // 15 seconds cutoff
     let changed = false;
 
-    tvState.monitors = tvState.monitors.filter(m => {
-      const lastActive = monitorActivity[m.id];
-      // Keep static monitors if we want them, or let them disappear as requested.
-      // To ensure a flawless demo where users have monitors, let's check:
-      // If a monitor has been registered in our monitorActivity tracking, we check its timestamp.
-      // If it exists but is older than cutoff, remove it!
-      if (lastActive && lastActive < cutoff) {
-        delete monitorActivity[m.id];
-        changed = true;
-        console.log(`[Presence] Monitor desconectado por falta de ping: ${m.id}`);
-        return false;
+    tvState.monitors = tvState.monitors.map(m => {
+      // The terminal principal is always online for simulation standby, others depend on heartbeat ping
+      if (m.id === "terminal-principal") {
+        if (m.isOnline !== true) {
+          changed = true;
+          return { ...m, isOnline: true };
+        }
+        return m;
       }
-      return true;
+
+      const lastActive = monitorActivity[m.id];
+      const isActuallyOnline = lastActive ? lastActive >= cutoff : false;
+
+      if (m.isOnline !== isActuallyOnline) {
+        changed = true;
+        return { ...m, isOnline: isActuallyOnline };
+      }
+      return m;
     });
 
     if (changed) {
       tvState.updatedAt = new Date().toISOString();
       broadcastState();
     }
-  }, 3000);
+  }, 4000);
 
   // Serve static files / setup dev environment
   if (process.env.NODE_ENV !== "production") {
