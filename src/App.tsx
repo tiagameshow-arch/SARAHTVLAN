@@ -85,7 +85,7 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
         videoId: videoId,
         playerVars: {
           autoplay: 1,
-          mute: mute ? 1 : 0,
+          mute: 1,
           controls: 0,
           rel: 0,
           modestbranding: 1,
@@ -99,12 +99,7 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           onReady: (event: any) => {
             if (active && event.target) {
               try {
-                // Pre-configure audio mode
-                if (mute) {
-                  event.target.mute();
-                } else {
-                  event.target.unMute();
-                }
+                event.target.mute();
                 event.target.playVideo();
               } catch (e) {
                 console.warn("Retrying playVideo:", e);
@@ -115,10 +110,7 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
                 if (!active || !event.target) return;
                 try {
                   const state = event.target.getPlayerState();
-                  // State -1 = unstarted, 2 = paused, 0 = ended, 5 = cued
-                  // If browser keeps it paused because it blocks audio autoplay, force mute and auto-start
                   if (state !== 1 && state !== 3) {
-                    console.log("Detecting autoplay blockage. Activating muted transmission fallback...");
                     event.target.mute();
                     event.target.playVideo();
                   }
@@ -127,14 +119,12 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
             }
           },
           onStateChange: (event: any) => {
-            // YT.PlayerState.ENDED is 0
             if (active && event.data === 0) {
               onEnded();
             }
           },
           onError: (event: any) => {
             console.error("YouTube Player Error:", event.data);
-            // On error (such as restricted embedding), advance to next in 2.5s
             setTimeout(() => {
               if (active) onEnded();
             }, 2500);
@@ -154,14 +144,12 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
     let intervalId: any = null;
 
     if (!tryInit()) {
-      // Poll every 150ms just in case script loads but callback is not executed/missed
       intervalId = setInterval(() => {
         if (tryInit()) {
           clearInterval(intervalId);
         }
       }, 150);
 
-      // Register or supplement onYouTubeIframeAPIReady
       const prevCallback = (window as any).onYouTubeIframeAPIReady;
       (window as any).onYouTubeIframeAPIReady = () => {
         if (prevCallback) {
@@ -179,44 +167,11 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
-        } catch (e) {
-          // ignore
-        }
+        } catch (e) {}
         playerRef.current = null;
       }
     };
   }, [videoId]);
-
-  useEffect(() => {
-    if (playerRef.current && typeof playerRef.current.unMute === "function") {
-      try {
-        if (mute) {
-          playerRef.current.mute();
-        } else {
-          playerRef.current.unMute();
-          // Force make sure it plays!
-          if (typeof playerRef.current.playVideo === "function") {
-            playerRef.current.playVideo();
-          }
-          // Autoplay block fallback for on-the-fly unmute:
-          setTimeout(() => {
-            if (!playerRef.current) return;
-            try {
-              const state = playerRef.current.getPlayerState();
-              // Try to find if player got paused (state 2) or stuck because of browser audio-autoplay rules
-              if (state !== 1 && state !== 3) {
-                console.log("Detecting post-unmute browser blockage. Re-muting to resume video safely...");
-                playerRef.current.mute();
-                playerRef.current.playVideo();
-              }
-            } catch (err) {}
-          }, 450);
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  }, [mute]);
 
   return <div ref={containerRef} className={className} title={title} />;
 }
@@ -285,6 +240,35 @@ export default function App() {
   });
   const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
 
+  // Auto-generate a stable dynamic monitor ID per session if none is provided in the URL query parameters
+  const [sessionMonitorId, setSessionMonitorId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlMon = params.get("monitor");
+      if (urlMon) return urlMon;
+
+      const stored = sessionStorage.getItem("tv_instance_monitor_id");
+      if (stored) return stored;
+
+      const newId = "tv-" + Math.floor(100 + Math.random() * 900);
+      sessionStorage.setItem("tv_instance_monitor_id", newId);
+      return newId;
+    }
+    return "terminal-principal";
+  });
+
+  // URL parameters updater for standalone TV viewer modes
+  useEffect(() => {
+    if (urlMode === "tv" && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("monitor") !== sessionMonitorId) {
+        params.set("monitor", sessionMonitorId);
+        window.history.replaceState(null, "", "?" + params.toString());
+        setUrlMonitorId(sessionMonitorId);
+      }
+    }
+  }, [urlMode, sessionMonitorId]);
+
   // Custom positioning, scaling and room background controls for ABA 2
   const [tvX, setTvX] = useState<number>(30);
   const [tvY, setTvY] = useState<number>(0);
@@ -345,7 +329,7 @@ export default function App() {
           playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
           currentVideoIndex: 0,
           isPlaying: true,
-          mute: false
+          mute: true
         },
         {
           id: "plataforma-a",
@@ -353,7 +337,7 @@ export default function App() {
           playlist: ["_eH8u94IkyY", "ysz5S6PUM-U"],
           currentVideoIndex: 0,
           isPlaying: true,
-          mute: false
+          mute: true
         },
         {
           id: "plataforma-b",
@@ -361,7 +345,7 @@ export default function App() {
           playlist: ["5gK9m6W-i8E", "S_dfq9rFWAE"],
           currentVideoIndex: 0,
           isPlaying: true,
-          mute: false
+          mute: true
         }
       ],
       updatedAt: new Date().toISOString()
@@ -369,6 +353,58 @@ export default function App() {
   });
 
   const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
+
+  // Active monitor selected for visual preview in Aba 2
+  const [activePreviewMonitorId, setActivePreviewMonitorId] = useState<string>("grid");
+
+  // Dynamic heartbeat registration logic
+  useEffect(() => {
+    let intervalId: any = null;
+
+    const sendPing = async (targetId: string, name?: string) => {
+      try {
+        await fetch("/api/monitor/ping", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: targetId,
+            name: name || `Monitor Comercial [${targetId.toUpperCase()}]`,
+            orientation: "landscape"
+          })
+        });
+      } catch (err) {
+        // quiet fail on background pings
+      }
+    };
+
+    if (urlMode === "tv") {
+      // Active standalone physical screen
+      const monitorName = `Monitor TV [${sessionMonitorId.toUpperCase()}]`;
+      sendPing(sessionMonitorId, monitorName);
+      intervalId = setInterval(() => {
+        sendPing(sessionMonitorId, monitorName);
+      }, 3000);
+    } else if (activeTab === "monitor" && activePreviewMonitorId !== "grid") {
+      // Keep selected preview element on tab active while viewing
+      const currentObj = tvState.monitors.find(m => m.id === activePreviewMonitorId);
+      if (currentObj) {
+        sendPing(currentObj.id, currentObj.name);
+        intervalId = setInterval(() => {
+          sendPing(currentObj.id, currentObj.name);
+        }, 3000);
+      }
+    } else {
+      // Keep core terminal monitor always catalogued so preview state has a safe standby option
+      sendPing("terminal-principal", "Monitor Principal - Terminal");
+      intervalId = setInterval(() => {
+        sendPing("terminal-principal", "Monitor Principal - Terminal");
+      }, 3000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [urlMode, sessionMonitorId, activeTab, activePreviewMonitorId, tvState.monitors]);
 
   // Selected monitor to manage/view in the remote and simulation tabs
   const [selectedMonitorId, setSelectedMonitorId] = useState<string>("terminal-principal");
@@ -1003,9 +1039,6 @@ export default function App() {
     JSON.stringify(busLinesDraft) !== JSON.stringify(tvState.busLines)
   );
 
-  // Active monitor selected for visual preview in Aba 2
-  const [activePreviewMonitorId, setActivePreviewMonitorId] = useState<string>("grid");
-
   // Standalone modes switcher
   if (urlMode === "tv") {
     const targetMonitorId = urlMonitorId || "terminal-principal";
@@ -1038,28 +1071,6 @@ export default function App() {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-white text-xs md:text-sm font-mono tracking-widest font-black uppercase">SINAL ATIVO: {monitorObj.name}</span>
           </div>
-
-          {/* Interactive Sound Control Mode Switcher */}
-          <button 
-            onClick={() => handleToggleMute(monitorObj.id)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-mono text-[9px] font-bold uppercase transition active:scale-95 cursor-pointer select-none bg-black/60 ${
-              monitorObj.mute 
-                ? "border-rose-500/40 text-rose-400 hover:bg-rose-950/20" 
-                : "border-emerald-500/40 text-emerald-400 hover:bg-emerald-950/20"
-            }`}
-          >
-            {monitorObj.mute ? (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-                <span>Sem Som (Ativar Áudio)</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Com Som (Ativado)</span>
-              </>
-            )}
-          </button>
           
           {/* Rightside: Elegant Electronic Digital Clock */}
           <div className="flex items-center gap-3">
@@ -1173,17 +1184,6 @@ export default function App() {
                     <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
                       <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
                     </div>
-                  )}
-
-                  {/* Playback Sound Override Overlay */}
-                  {monitorObj.mute && (
-                    <button 
-                      onClick={() => handleToggleMute(monitorObj.id)}
-                      className="absolute bottom-3 right-3 z-20 bg-rose-650 hover:bg-rose-500 hover:scale-105 active:scale-95 text-white border border-rose-455 px-3 py-1 text-[8.5px] rounded-xl flex items-center gap-1.5 shadow-xl transition-all cursor-pointer pointer-events-auto shadow-rose-950/50"
-                    >
-                      <VolumeX className="w-3 h-3 text-white animate-bounce" />
-                      <span className="font-sans font-extrabold uppercase tracking-normal">Ativar Som</span>
-                    </button>
                   )}
                 </div>
 
@@ -1589,17 +1589,6 @@ export default function App() {
                                 <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
                               </div>
                             )}
-
-                            {/* Floating Sound Toggle Button for simulated preview TV - placed float absolute inside the video content container */}
-                            {activeMonitorObj.mute && (
-                              <button 
-                                onClick={() => handleToggleMute(activeMonitorObj.id)}
-                                className="absolute bottom-3 right-3 z-20 bg-[#e11d48] hover:bg-rose-500 hover:scale-105 active:scale-95 text-white border border-rose-400 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl transition-all cursor-pointer pointer-events-auto shadow-rose-950/50"
-                              >
-                                <VolumeX className="w-3.5 h-3.5 text-white animate-bounce" />
-                                <span className="text-[10px] font-sans font-extrabold uppercase tracking-widest">Ativar Som</span>
-                              </button>
-                            )}
                           </div> {/* Closes .flex-grow video area */}
 
                         </div> {/* Closes Widescreen Simulated Physical TV Frame */}
@@ -1708,7 +1697,7 @@ export default function App() {
               {activeMonitor?.playlist.length || 0} FILMES / VÍDEOS
             </span>
             <span className="text-yellow-405 font-black uppercase tracking-widest flex items-center gap-0.5">
-              ⚡ {activeMonitor?.mute ? "MUTADO" : "ÁUDIO STREAM"}
+              ⚡ TRANSMISSÃO MUDA
             </span>
           </div>
         </div>
@@ -2002,38 +1991,25 @@ export default function App() {
               </div>
             </div>
 
-            {/* Simulation Controls (Volume adjustment and Rotation) */}
+            {/* Simulation Controls (Rotation Layout) */}
             <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5">
               <span className="text-[8px] text-stone-450 font-extrabold uppercase tracking-wide block">
-                Controles de Teste Fisico
+                Controles de Layout e Giro
               </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeMonitor) handleToggleMute(activeMonitor.id);
-                  }}
-                  className={`py-2 px-1 rounded-xl border text-[9px] font-black flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-95 ${activeMonitor?.mute ? 'bg-rose-950/90 border-rose-800 text-rose-300 shadow-[0_2px_8px_rgba(225,29,72,0.15)]' : 'bg-stone-900 border-stone-850 text-emerald-450 hover:bg-stone-850'}`}
-                >
-                  {activeMonitor?.mute ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
-                  <span className="tracking-wide uppercase font-sans leading-none">{activeMonitor?.mute ? "MUTADO" : "MUTAR"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeMonitor) handleToggleOrientation(activeMonitor.id);
-                  }}
-                  className={`py-2 px-1 rounded-xl border text-[9px] font-black flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-95 shadow-md font-sans ${
-                    activeMonitor?.orientation === "portrait"
-                      ? "bg-amber-950/90 border-[#e8a317] text-[#e8a317] shadow-[0_2px_8px_rgba(232,163,23,0.15)]"
-                      : "bg-stone-900 border-stone-850 text-stone-200 hover:bg-stone-850"
-                  }`}
-                >
-                  <Smartphone className={`w-3.5 h-3.5 ${activeMonitor?.orientation === "portrait" ? "text-amber-400 rotate-90" : "text-stone-400"} transition-transform duration-300`} />
-                  <span className="tracking-wide uppercase font-sans leading-none">VIRAR TELA</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMonitor) handleToggleOrientation(activeMonitor.id);
+                }}
+                className={`py-2.5 px-3 w-full rounded-xl border text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md font-sans ${
+                  activeMonitor?.orientation === "portrait"
+                    ? "bg-amber-950/90 border-[#e8a317] text-[#e8a317] shadow-[0_2px_8px_rgba(232,163,23,0.15)]"
+                    : "bg-stone-900 border-stone-850 text-stone-200 hover:bg-stone-850"
+                }`}
+              >
+                <Smartphone className={`w-3.5 h-3.5 ${activeMonitor?.orientation === "portrait" ? "text-amber-400 rotate-90" : "text-stone-400"} transition-transform duration-300`} />
+                <span className="tracking-wide uppercase font-sans leading-none">GIRAR ORIENTAÇÃO DA TELA (RET/PAIS)</span>
+              </button>
             </div>
           </div>
         )}

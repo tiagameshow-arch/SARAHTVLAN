@@ -45,7 +45,7 @@ let tvState: TVState = {
       playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false,
+      mute: true,
       orientation: "landscape"
     },
     {
@@ -54,7 +54,7 @@ let tvState: TVState = {
       playlist: ["_eH8u94IkyY", "ysz5S6PUM-U"],
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false,
+      mute: true,
       orientation: "landscape"
     },
     {
@@ -63,11 +63,18 @@ let tvState: TVState = {
       playlist: ["5gK9m6W-i8E", "S_dfq9rFWAE"],
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false,
+      mute: true,
       orientation: "landscape"
     }
   ],
   updatedAt: new Date().toISOString()
+};
+
+// Monitor presence / dynamic connection tracking (id -> last active timestamp)
+let monitorActivity: Record<string, number> = {
+  "terminal-principal": Date.now(),
+  "plataforma-a": Date.now(),
+  "plataforma-b": Date.now()
 };
 
 // Subscriber connections for real-time updates (Server-Sent Events)
@@ -168,6 +175,58 @@ async function startServer() {
     res.json({ success: true, state: tvState });
   });
 
+  // API Route - Monitor dynamic ping registration
+  app.post("/api/monitor/ping", (req, res) => {
+    const { id, name, orientation } = req.body;
+    if (!id) {
+      return res.status(400).json({ error: "Missing monitor id" });
+    }
+
+    const now = Date.now();
+    monitorActivity[id] = now;
+
+    // Check if monitor is already listed in tvState.monitors
+    const existingIndex = tvState.monitors.findIndex(m => m.id === id);
+    let changed = false;
+
+    if (existingIndex === -1) {
+      // Create it dynamically with a unique playlist "ter sua propria playlist! assim os videos serão diferentes!"
+      const presetsPool = ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E", "_eH8u94IkyY"];
+      // Randomly select 2 to 3 videos for this monitor
+      const shuffled = [...presetsPool].sort(() => 0.5 - Math.random());
+      const initialPlaylist = shuffled.slice(0, 2 + Math.floor(Math.random() * 2));
+
+      const newMonitor = {
+        id,
+        name: name || `Monitor ${id.toUpperCase()}`,
+        playlist: initialPlaylist,
+        currentVideoIndex: 0,
+        isPlaying: true,
+        mute: true,
+        orientation: orientation || "landscape"
+      };
+
+      tvState.monitors.push(newMonitor);
+      changed = true;
+      console.log(`[Presence] Novo monitor registrado dinamicamente por ping: ${id}`);
+    } else {
+      // Sync parameters if passed
+      const monitor = tvState.monitors[existingIndex];
+      // Keep orientation in sync if provided
+      if (orientation && monitor.orientation !== orientation) {
+        monitor.orientation = orientation;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      tvState.updatedAt = new Date().toISOString();
+      broadcastState();
+    }
+
+    res.json({ success: true, state: tvState });
+  });
+
   // API Route - Server-Sent Events for real-time TV streaming
   app.get("/api/stream", (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
@@ -196,6 +255,32 @@ async function startServer() {
   const busInterval = setInterval(updateBusTimes, 60000);
   // Periodically fluctuate weather and rotate news items every 180 seconds
   const weatherNewsInterval = setInterval(updateWeatherAndNews, 180000);
+
+  // Connection manager: Remove monitors that haven't pinged in over 10 seconds
+  const presenceInterval = setInterval(() => {
+    const cutoff = Date.now() - 10000;
+    let changed = false;
+
+    tvState.monitors = tvState.monitors.filter(m => {
+      const lastActive = monitorActivity[m.id];
+      // Keep static monitors if we want them, or let them disappear as requested.
+      // To ensure a flawless demo where users have monitors, let's check:
+      // If a monitor has been registered in our monitorActivity tracking, we check its timestamp.
+      // If it exists but is older than cutoff, remove it!
+      if (lastActive && lastActive < cutoff) {
+        delete monitorActivity[m.id];
+        changed = true;
+        console.log(`[Presence] Monitor desconectado por falta de ping: ${m.id}`);
+        return false;
+      }
+      return true;
+    });
+
+    if (changed) {
+      tvState.updatedAt = new Date().toISOString();
+      broadcastState();
+    }
+  }, 3000);
 
   // Serve static files / setup dev environment
   if (process.env.NODE_ENV !== "production") {
