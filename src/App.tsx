@@ -2370,25 +2370,46 @@ export default function App() {
     );
   }
 
-// ==========================================
-// VIEW: STANDALONE DYNAMIC PASSENGER CELLPHONE
-// ==========================================
+  // ==========================================
+  // VIEW: THE DYNAMIC PASSENGER CELLPHONE
+  // ==========================================
+  function renderPassengerPhone(monitorArg?: any) {
+    const monitorObj = monitorArg || tvState.monitors.find(m => m.id === (urlMonitorId || selectedMonitorId)) || tvState.monitors[0];
+    return (
+      <PassengerPhone 
+        tvState={tvState} 
+        timeState={timeState} 
+        getWeatherIcon={getWeatherIcon} 
+        activeMonitor={monitorObj}
+        slide={passengerScreenSlide}
+        setSlide={setPassengerScreenSlide}
+      />
+    );
+  }
+} // Closes export default function App()
 interface PassengerPhoneProps {
   tvState: any;
   timeState: string;
   getWeatherIcon: (temp: string) => ReactNode;
   activeMonitor?: any;
+  slide?: "weather" | "transit";
+  setSlide?: (slide: "weather" | "transit") => void;
 }
 
 function PassengerPhone({ 
   tvState, 
   timeState, 
   getWeatherIcon, 
-  activeMonitor
+  activeMonitor,
+  slide: propSlide,
+  setSlide: propSetSlide
 }: PassengerPhoneProps) {
-  const [slide, setSlide] = useState<"weather" | "transit">("weather");
+  const [localSlide, setLocalSlide] = useState<"weather" | "transit">("weather");
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
+
+  const slide = propSlide !== undefined ? propSlide : localSlide;
+  const setSlide = propSetSlide !== undefined ? propSetSlide : setLocalSlide;
 
   const getLineTime = (lineNumber: string) => {
     const found = tvState.busLines?.find((b: any) => b.line.trim().toUpperCase() === lineNumber.trim().toUpperCase());
@@ -2405,11 +2426,11 @@ function PassengerPhone({
     }
 
     const stepMs = 100;
-    const durationMs = 8000; // 8 seconds per screen
+    const durationMs = 6000; // 6 seconds per screen
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          setSlide((current) => (current === "weather" ? "transit" : "weather"));
+          setSlide(slide === "weather" ? "transit" : "weather");
           return 0;
         }
         return prev + (stepMs / durationMs) * 100;
@@ -2417,7 +2438,7 @@ function PassengerPhone({
     }, stepMs);
 
     return () => clearInterval(interval);
-  }, [isAutoplay]);
+  }, [isAutoplay, slide, setSlide]);
 
   const handleSetSlide = (newSlide: "weather" | "transit") => {
     setSlide(newSlide);
@@ -2475,164 +2496,177 @@ function PassengerPhone({
         </div>
 
         {/* COMPONENT BODY */}
-        <div className="flex-grow flex flex-col justify-between p-3.5 z-10 overflow-y-auto max-h-[395px] scrollbar-none">
-          {slide === "weather" && (
-            /* SLIDE 1: FUTURISTIC INTENSE GREEN WEATHER WIDGET MATCHING SCREENSHOT 1 */
-            <div className="flex flex-col justify-between text-center h-full flex-grow py-1">
-              
-              {/* Header Labeling */}
-              <div className="text-center font-mono">
-                <span className="text-[9px] font-bold tracking-[0.25em] text-emerald-400 uppercase bg-[#061f14] border border-[#10b981]/30 py-0.5 px-3 rounded-full inline-block mb-1 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
-                  TEMPO:
-                </span>
+        <div className="flex-grow z-10 overflow-y-auto max-h-[395px] scrollbar-none relative min-h-[350px]">
+          <AnimatePresence mode="wait" initial={false}>
+            {slide === "weather" ? (
+              <motion.div
+                key="weather"
+                initial={{ x: 120, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -120, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="flex flex-col justify-between text-center h-full flex-grow py-1"
+              >
                 
-                {/* Big Temperature Display style from Screenshot 1 */}
-                <div className="relative my-2.5">
-                  <span className="text-6xl font-display font-bold tracking-tighter text-white block drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
-                    {currTemp}°C
+                {/* Header Labeling */}
+                <div className="text-center font-mono animate-fade-in">
+                  <span className="text-[9px] font-bold tracking-[0.25em] text-emerald-400 uppercase bg-[#061f14] border border-[#10b981]/30 py-0.5 px-3 rounded-full inline-block mb-1 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                    TEMPO:
                   </span>
+                  
+                  {/* Big Temperature Display style from Screenshot 1 */}
+                  <div className="relative my-2.5">
+                    <span className="text-6xl font-display font-bold tracking-tighter text-white block drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
+                      {currTemp}°C
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Central Glowing Weather Icon illustration */}
-              <div className="my-2.5 flex flex-col items-center justify-center relative">
-                <div className="absolute w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+                {/* Central Glowing Weather Icon illustration */}
+                <div className="my-2.5 flex flex-col items-center justify-center relative">
+                  <div className="absolute w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+                  
+                  {/* Custom stylized high contrast Sun and Cloud Rain SVG bundle resembling Screenshot 1 */}
+                  <div className="relative w-24 h-24 flex items-center justify-center animate-pulse duration-[3000ms]">
+                    {/* Glowing sun behind */}
+                    <div className="absolute -top-1 -right-1 w-12 h-12 bg-gradient-to-br from-yellow-405 to-amber-500 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.65)] border border-yellow-300 opacity-90 animate-spin duration-[15000ms]" />
+                    
+                    {/* Intricate cloud */}
+                    <div className="absolute w-16 h-10 bg-gradient-to-b from-stone-100 to-stone-300 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] border border-white/60 z-10 flex items-center justify-center">
+                      <span className="w-1.5 h-1.5 rounded-full bg-stone-300 absolute left-3 top-3" />
+                    </div>
+                    
+                    {/* Rain drops falling */}
+                    <div className="absolute bottom-2 left-6 flex gap-2.5 z-20">
+                      <span className="w-[2px] h-3.5 bg-cyan-400 rounded-full transform rotate-12 animate-bounce shadow-sm" />
+                      <span className="w-[2px] h-4 bg-emerald-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.2s] shadow-sm" />
+                      <span className="w-[2px] h-3.5 bg-cyan-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.4s] shadow-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weather Category text - matching "NUVENS E CHUVA" */}
+                <div className="mb-2 font-mono text-center">
+                  <h2 className="text-lg font-black tracking-wider text-emerald-400 uppercase drop-shadow">
+                    NUVENS E CHUVA
+                  </h2>
+                  <p className="text-[8.5px] text-stone-300 uppercase tracking-widest mt-0.5 mt-1 font-bold">
+                    {tvState.temperature.includes("Chuv") || tvState.temperature.includes("chuv") ? "NUBRADO E CHUVOSO" : "NUBRADO PARCIALMENTE"}
+                  </p>
+                </div>
+
+                {/* Custom matrix sensor metrics ticker bar from the physical phone mockup */}
+                <div className="bg-[#031c11]/85 border border-emerald-500/20 rounded-xl p-2 mt-2 text-left shadow-md">
+                  <div className="grid grid-cols-2 gap-1.5 text-[8px] font-mono text-stone-300">
+                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1.5">
+                      <span>UMIDADE:</span>
+                      <span className="text-emerald-400 font-extrabold">85%</span>
+                    </div>
+                    <div className="flex items-center justify-between pl-1.5">
+                      <span>VENTO:</span>
+                      <span className="text-emerald-400 font-extrabold">12 KM/H</span>
+                    </div>
+                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1.5 pt-1">
+                      <span>SENSACAO:</span>
+                      <span className="text-emerald-400 font-extrabold">{sensation}°C</span>
+                    </div>
+                    <div className="flex items-center justify-between pl-1.5 pt-1">
+                      <span>CIDADE:</span>
+                      <span className="text-yellow-450 font-extrabold">OSASCO-SP</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Weather Card */}
+                <div className="bg-[#03150d] border border-emerald-500/10 rounded-xl p-2 flex items-start mt-2 gap-1.5 select-none text-[8px]">
+                  <div className="text-blue-300 text-xs shrink-0 pt-0.5">⭐</div>
+                  <div className="flex-grow text-left">
+                    <p className="text-[8px] font-mono text-slate-350 font-bold uppercase tracking-widest leading-none mb-1 shadow-sm">ALERTAS COLETIVOS</p>
+                    <p className="text-[9.5px] text-white leading-normal font-sans font-medium">{tvState.temperature ? tvState.temperature : "Dia nublado com possibilidade de chuva leve"}</p>
+                  </div>
+                  {/* Custom pagination dots inside weather widget */}
+                  <div className="flex gap-[3px] text-[7px] font-bold mt-1 text-slate-500 scale-[0.85] shrink-0 align-middle">
+                    <span className="text-yellow-405">●</span>
+                    <span>◌</span>
+                    <span>◌</span>
+                    <span>◌</span>
+                  </div>
+                </div>
+
+              </motion.div>
+            ) : (
+              <motion.div
+                key="transit"
+                initial={{ x: 120, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -120, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="flex flex-col gap-3.5 text-left pt-1 flex-grow"
+              >
                 
-                {/* Custom stylized high contrast Sun and Cloud Rain SVG bundle resembling Screenshot 1 */}
-                <div className="relative w-24 h-24 flex items-center justify-center animate-pulse duration-[3000ms]">
-                  {/* Glowing sun behind */}
-                  <div className="absolute -top-1 -right-1 w-12 h-12 bg-gradient-to-br from-yellow-405 to-amber-500 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.65)] border border-yellow-300 opacity-90 animate-spin duration-[15000ms]" />
-                  
-                  {/* Intricate cloud */}
-                  <div className="absolute w-16 h-10 bg-gradient-to-b from-stone-100 to-stone-300 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] border border-white/60 z-10 flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-stone-300 absolute left-3 top-3" />
-                  </div>
-                  
-                  {/* Rain drops falling */}
-                  <div className="absolute bottom-2 left-6 flex gap-2.5 z-20">
-                    <span className="w-[2px] h-3.5 bg-cyan-400 rounded-full transform rotate-12 animate-bounce shadow-sm" />
-                    <span className="w-[2px] h-4 bg-emerald-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.2s] shadow-sm" />
-                    <span className="w-[2px] h-3.5 bg-cyan-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.4s] shadow-sm" />
-                  </div>
+                <div className="border-b border-stone-800 pb-2">
+                  <h3 className="text-white text-xs font-display font-medium tracking-wide">CIRCULAÇÃO DE DUPLO FLUXO</h3>
+                  <p className="text-[9px] text-emerald-400 mt-1 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                    📍 Ponto: <span className="text-white font-black">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
+                  </p>
+                  <div className="w-12 h-0.5 bg-yellow-400 mt-1.5" />
                 </div>
-              </div>
 
-              {/* Weather Category text - matching "NUVENS E CHUVA" */}
-              <div className="mb-2 font-mono text-center">
-                <h2 className="text-lg font-black tracking-wider text-emerald-400 uppercase drop-shadow">
-                  NUVENS E CHUVA
-                </h2>
-                <p className="text-[8.5px] text-stone-300 uppercase tracking-widest mt-0.5 mt-1 font-bold">
-                  {tvState.temperature.includes("Chuv") || tvState.temperature.includes("chuv") ? "NUBRADO E CHUVOSO" : "NUBRADO PARCIALMENTE"}
-                </p>
-              </div>
+                {/* NEXT BUSES QUEUE */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest pl-0.5 mb-0.5 flex items-center gap-1">
+                    <Bus className="w-3 h-3 text-yellow-400 shrink-0" /> PAINEL SINALIZADOR
+                  </span>
 
-              {/* Custom matrix sensor metrics ticker bar from the physical phone mockup */}
-              <div className="bg-[#031c11]/85 border border-emerald-500/20 rounded-xl p-2 mt-2 text-left shadow-md">
-                <div className="grid grid-cols-2 gap-1.5 text-[8px] font-mono text-stone-300">
-                  <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1.5">
-                    <span>UMIDADE:</span>
-                    <span className="text-emerald-400 font-extrabold">85%</span>
-                  </div>
-                  <div className="flex items-center justify-between pl-1.5">
-                    <span>VENTO:</span>
-                    <span className="text-emerald-400 font-extrabold">12 KM/H</span>
-                  </div>
-                  <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1.5 pt-1">
-                    <span>SENSACAO:</span>
-                    <span className="text-emerald-400 font-extrabold">{sensation}°C</span>
-                  </div>
-                  <div className="flex items-center justify-between pl-1.5 pt-1">
-                    <span>CIDADE:</span>
-                    <span className="text-yellow-450 font-extrabold">OSASCO-SP</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Weather Card */}
-              <div className="bg-[#03150d] border border-emerald-500/10 rounded-xl p-2 flex items-start mt-2 gap-1.5 select-none text-[8px]">
-                <div className="text-blue-300 text-xs shrink-0 pt-0.5">⭐</div>
-                <div className="flex-grow">
-                  <p className="text-[8px] font-mono text-slate-350 font-bold uppercase tracking-widest leading-none mb-1">ALERTAS COLETIVOS</p>
-                  <p className="text-[9.5px] text-white leading-normal font-sans font-medium">Dia ensolarado pela frente. Possibilidade de Segunda-feira de que o próximo dia seja ensolarado.</p>
-                </div>
-                {/* Custom pagination dots inside weather widget */}
-                <div className="flex gap-[3px] text-[7px] font-bold mt-1 text-slate-500 scale-[0.85] shrink-0 align-middle">
-                  <span className="text-yellow-400">●</span>
-                  <span>◌</span>
-                  <span>◌</span>
-                  <span>◌</span>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {slide === "transit" && (
-            /* SLIDE 2: INTEGRATED TRANSIT BOARD & FARES LINEUP */
-            <div className="flex flex-col gap-3.5 text-left pt-1 flex-grow">
-              
-              <div className="border-b border-slate-800 pb-2">
-                <h3 className="text-white text-xs font-display font-medium tracking-wide">CIRCULAÇÃO DE DUPLO FLUXO</h3>
-                <p className="text-[9px] text-emerald-400 mt-1 uppercase tracking-wider font-extrabold flex items-center gap-1">
-                  📍 Ponto: <span className="text-white font-black">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
-                </p>
-                <div className="w-12 h-0.5 bg-yellow-400 mt-1.5" />
-              </div>
-
-              {/* NEXT BUSES QUEUE */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest pl-0.5 mb-0.5 flex items-center gap-1">
-                  <Bus className="w-3 h-3 text-yellow-400 shrink-0" /> PAINEL SINALIZADOR
-                </span>
-
-                {(() => {
-                  const lineGroup = (activeMonitor?.customBusLines || "035/034/461X1").split("/");
-                  const validLines = lineGroup.filter((line: string) => line.trim());
-                  if (validLines.length === 0) {
-                    return (
-                      <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-dashed border-slate-800 text-[10px] text-slate-550 select-none">
-                        Nenhum ônibus programado para agora.
-                      </div>
-                    );
-                  }
-                  return validLines.map((line: string, i: number) => {
-                    const cleanLine = line.trim();
-                    const time = getLineTime(cleanLine);
-                    return (
-                      <div
-                        key={i}
-                        className="bg-slate-900/90 border border-slate-800 px-3 py-2.5 rounded-xl flex justify-between items-center shadow-sm hover:border-slate-800 transition animate-fade-in"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="bg-yellow-405 text-stone-950 font-mono text-[10px] px-2 py-0.5 rounded-md font-black leading-none">
-                            {cleanLine}
-                          </span>
-                          <span className="text-[10px] text-white font-extrabold tracking-wide uppercase">CIRCULAR</span>
+                  {(() => {
+                    const lineGroup = (activeMonitor?.customBusLines || "035/034/461X1").split("/");
+                    const validLines = lineGroup.filter((line: string) => line.trim());
+                    if (validLines.length === 0) {
+                      return (
+                        <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-dashed border-slate-800 text-[10px] text-slate-550 select-none">
+                          Nenhum ônibus programado para agora.
                         </div>
-                        <div className="flex items-center gap-1 text-emerald-400 bg-emerald-950/40 border border-[#10b981]/30 px-2 py-0.5 rounded-lg text-[10px] font-black font-mono">
-                          <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                          <span>{time}</span>
+                      );
+                    }
+                    return validLines.map((line: string, i: number) => {
+                      const cleanLine = line.trim();
+                      const time = getLineTime(cleanLine);
+                      return (
+                        <div
+                          key={i}
+                          className="bg-slate-900/90 border border-slate-850 px-3 py-2.5 rounded-xl flex justify-between items-center shadow-sm hover:border-slate-800 transition"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="bg-yellow-405 text-stone-950 font-mono text-[10px] px-2 py-0.5 rounded-md font-black leading-none animate-pulse">
+                              {cleanLine}
+                            </span>
+                            <span className="text-[10px] text-white font-extrabold tracking-wide uppercase">CIRCULAR</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-emerald-450 bg-emerald-950/40 border border-[#10b981]/30 px-2 py-0.5 rounded-lg text-[10px] font-black font-mono shadow-sm">
+                            <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>{time}</span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-
-              {/* NEWS AND ALERTS */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/60 p-3 rounded-xl flex gap-2.5 items-start shadow-sm mt-1">
-                <span className="text-sm shrink-0">📢</span>
-                <div className="flex-grow">
-                  <p className="text-[8.5px] font-mono text-slate-400 uppercase tracking-widest leading-none mb-1.5 font-bold">Informativo no Ônibus (Notícias)</p>
-                  <p className="text-xs text-slate-200 leading-normal line-clamp-3 font-sans font-semibold">{tvState.newsTicker}</p>
+                      );
+                    });
+                  })()}
                 </div>
-              </div>
 
-            </div>
-          )}
+                {/* NEWS AND ALERTS */}
+                <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-850 p-3 rounded-xl flex gap-2.5 items-start shadow-sm mt-1">
+                  <span className="text-sm shrink-0">📢</span>
+                  <div className="flex-grow">
+                    <p className="text-[8.5px] font-mono text-slate-400 uppercase tracking-widest leading-none mb-1.5 font-bold">Informativo no Ônibus (Notícias)</p>
+                    <p className="text-xs text-slate-200 leading-normal line-clamp-3 font-sans font-semibold">{tvState.newsTicker}</p>
+                  </div>
+                </div>
 
-          {/* DYNAMIC SWIPE NAVIGATION PININDICATOR */}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* DYNAMIC SWIPE NAVIGATION PININDICATOR */}
           <div className="mt-3.5 py-2 bg-black/55 rounded-xl flex flex-col items-center gap-1.5 border border-white/5 relative overflow-hidden shadow-inner">
             {/* Tiny progress banner at the bottomrepresenting automatic progress */}
             {isAutoplay && (
@@ -2706,22 +2740,5 @@ function PassengerPhone({
         </div>
 
       </div>
-    </div>
-  );
-}
-
-  // ==========================================
-  // VIEW: THE DYNAMIC PASSENGER CELLPHONE
-  // ==========================================
-  function renderPassengerPhone(monitorArg?: any) {
-    const monitorObj = monitorArg || tvState.monitors.find(m => m.id === (urlMonitorId || selectedMonitorId)) || tvState.monitors[0];
-    return (
-      <PassengerPhone 
-        tvState={tvState} 
-        timeState={timeState} 
-        getWeatherIcon={getWeatherIcon} 
-        activeMonitor={monitorObj}
-      />
     );
-  }
 }
