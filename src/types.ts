@@ -14,6 +14,9 @@ export interface MonitorState {
   orientation?: "landscape" | "portrait";
   ip?: string;
   forceRefreshTime?: string;
+  location?: string;
+  customBusLines?: string;
+  isOnline?: boolean;
 }
 
 export interface TVState {

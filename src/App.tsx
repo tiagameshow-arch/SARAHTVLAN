@@ -222,6 +222,9 @@ export default function App() {
   // Custom video input inside the mobile phone remote control
   const [newPhoneVideoInput, setNewPhoneVideoInput] = useState<string>("");
 
+  // Slide state inside the phone remote controller: rotates between "weather" and "transit" (bus stop schedules)
+  const [phoneRotateSlide, setPhoneRotateSlide] = useState<"weather" | "transit">("weather");
+
   // Slide state inside the passenger cellphone: "weather" (immersion wallpaper) or "transit" (bus stops)
   const [passengerScreenSlide, setPassengerScreenSlide] = useState<"weather" | "transit">("weather");
 
@@ -382,6 +385,8 @@ export default function App() {
         {
           id: "terminal-principal",
           name: "Monitor Principal - Terminal",
+          location: "Terminal Central",
+          customBusLines: "035/034/466",
           playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
           currentVideoIndex: 0,
           isPlaying: true,
@@ -493,11 +498,15 @@ export default function App() {
   const [timeState, setTimeState] = useState<string>("");
   const [localVideos, setLocalVideos] = useState<{[id: string]: { url: string, name: string }}>(() => ({}));
   const [renameValue, setRenameValue] = useState("");
+  const [locationValue, setLocationValue] = useState("");
+  const [customBusLinesValue, setCustomBusLinesValue] = useState("");
 
   useEffect(() => {
     const selectedMon = tvState.monitors.find(m => m.id === selectedMonitorId);
     if (selectedMon) {
       setRenameValue(selectedMon.name);
+      setLocationValue(selectedMon.location || "");
+      setCustomBusLinesValue(selectedMon.customBusLines || "");
     }
   }, [selectedMonitorId, tvState.monitors]);
 
@@ -647,6 +656,24 @@ export default function App() {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Phone remote local info rotation machine
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhoneRotateSlide(prev => prev === "weather" ? "transit" : "weather");
+    }, 4500); // alternating every 4.5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const getLineTime = (lineNumber: string) => {
+    // Find matching line inside live state
+    const found = tvState.busLines.find(b => b.line.trim().toUpperCase() === lineNumber.trim().toUpperCase());
+    if (found) return found.time;
+    // Otherwise fallback to simulated local hash minute based on the current minute
+    const hash = lineNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const minute = ((new Date().getMinutes() + hash) % 25) + 3;
+    return `${minute} MIN`;
+  };
 
   // API Call: Fetch standard state from Express
   const fetchState = async () => {
@@ -1041,6 +1068,22 @@ export default function App() {
       setSelectedMonitorId(updatedMonitors[0].id);
     }
     syncMonitorsToServer(updatedMonitors);
+  };
+
+  const handleUpdateMonitorDetails = (monitorId: string, newName: string, newLocation: string, newBusLines: string) => {
+    if (!newName.trim()) return;
+    const updated = tvState.monitors.map(m => {
+      if (m.id === monitorId) {
+        return {
+          ...m,
+          name: newName.trim(),
+          location: newLocation.trim(),
+          customBusLines: newBusLines.trim()
+        };
+      }
+      return m;
+    });
+    syncMonitorsToServer(updated);
   };
 
   const handleRenameMonitor = (monitorId: string, newName: string) => {
@@ -1774,6 +1817,73 @@ export default function App() {
           </div>
         </div>
 
+        {/* Rotating Live local Info Panel (Alternando entre Tempo e Ônibus Local!) */}
+        <div className="bg-black/85 border border-[#10b981]/15 rounded-xl p-2.5 mb-3.5 text-left relative overflow-hidden shadow-inner font-sans">
+          <div className="absolute right-2 top-2 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-yellow-405 rounded-full animate-ping" />
+            <span className="text-[5.5px] font-mono text-stone-500 uppercase tracking-widest">LIVE ROTATOR</span>
+          </div>
+
+          {phoneRotateSlide === "weather" ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[7.5px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none block">
+                  CÉU & CLIMA (OSASCO)
+                </span>
+                <span className="text-xs font-sans font-black text-white mt-1.5 block uppercase tracking-tight">
+                  {tvState.temperature}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 select-none shrink-0 bg-[#021c10]/40 border border-[#10b981]/15 px-2 py-1 rounded-lg">
+                <span className="text-lg">☀️</span>
+                <span className="text-[7.5px] font-mono text-emerald-400 font-extrabold uppercase">HUM. 85%</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <span className="text-[7.5px] font-mono font-bold text-emerald-400 uppercase tracking-widest leading-none block">
+                PARTIDAS NA LOCALIDADE DA TELA
+              </span>
+              <p className="text-[8px] text-stone-400 mt-1 leading-tight uppercase font-extrabold tracking-tight truncate max-w-[270px]">
+                Ponto: <span className="text-white">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
+              </p>
+
+              <div className="flex flex-wrap gap-1 mt-2">
+                {(activeMonitor?.customBusLines || "035/034/461X1").split('/').map((line, i) => {
+                  const cleanLine = line.trim();
+                  if (!cleanLine) return null;
+                  const time = getLineTime(cleanLine);
+                  return (
+                    <div key={i} className="bg-stone-950 border border-emerald-500/15 rounded-md px-1.5 py-1 flex items-center gap-1 shrink-0">
+                      <span className="bg-yellow-405 text-stone-950 font-mono text-[7.5px] px-1 py-0.2 rounded font-black leading-none">
+                        {cleanLine}
+                      </span>
+                      <span className="text-[7.5px] font-mono font-bold text-stone-300">
+                        {time}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quick manual Toggle Button & bar pagination */}
+          <div className="flex justify-between items-center mt-2 border-t border-emerald-500/10 pt-1.5 text-[6.5px] font-mono text-stone-500">
+            <button
+              type="button"
+              onClick={() => setPhoneRotateSlide(prev => prev === "weather" ? "transit" : "weather")}
+              className="hover:text-amber-400 transition flex items-center gap-0.5 select-none cursor-pointer font-bold leading-none"
+            >
+              🔄 ALTERAR WIDGET
+            </button>
+            <div className="flex gap-1">
+              <span className={phoneRotateSlide === "weather" ? "text-yellow-400" : "text-stone-700"}>●</span>
+              <span className={phoneRotateSlide === "transit" ? "text-emerald-400" : "text-stone-700"}>●</span>
+            </div>
+          </div>
+        </div>
+
         {/* Sleek Tab Bar inside the cell phone screen area with active glow status borders */}
         <div className="grid grid-cols-3 gap-1 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
           <button
@@ -2107,31 +2217,59 @@ export default function App() {
               OPÇÕES DO MONITOR ATIVO
             </span>
 
-            {/* In-Phone Rename Form (para saber qual monitor é qual!) */}
-            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1">
-              <label className="text-[8px] text-stone-450 font-extrabold uppercase tracking-wide">
-                Renomear Monitor Atual
-              </label>
-              <div className="flex gap-1.5 mt-0.5">
+            {/* In-Phone Rename & Location Form */}
+            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2">
+              <div>
+                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
+                  Identificação do Monitor
+                </label>
                 <input
                   type="text"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   placeholder="Nome do monitor..."
-                  className="flex-grow bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 px-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeMonitor) {
-                      handleRenameMonitor(activeMonitor.id, renameValue);
-                    }
-                  }}
-                  className="bg-yellow-400 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9px] px-2.5 py-1 rounded-xl uppercase tracking-wider transition-all shadow-md shrink-0 font-sans"
-                >
-                  Salvar
-                </button>
               </div>
+
+              <div>
+                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
+                  Localização / Rua Física
+                </label>
+                <input
+                  type="text"
+                  value={locationValue}
+                  onChange={(e) => setLocationValue(e.target.value)}
+                  placeholder="Ex: Rua Zumbi dos Palmares..."
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
+                  Linhas de Ônibus (separadas por barra)
+                </label>
+                <input
+                  type="text"
+                  value={customBusLinesValue}
+                  onChange={(e) => setCustomBusLinesValue(e.target.value)}
+                  placeholder="Ex: 035/034/461X1"
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMonitor) {
+                    handleUpdateMonitorDetails(activeMonitor.id, renameValue, locationValue, customBusLinesValue);
+                    alert("Configurações do monitor atualizadas com sucesso!");
+                  }
+                }}
+                className="w-full mt-1 bg-yellow-400 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9.5px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center"
+              >
+                Salvar Configurações
+              </button>
             </div>
 
             {/* Simulation Controls (Rotation Layout) */}

@@ -23,6 +23,8 @@ interface MonitorState {
   ip?: string;
   isOnline?: boolean;
   forceRefreshTime?: string;
+  location?: string;
+  customBusLines?: string;
 }
 
 interface TVState {
@@ -71,6 +73,8 @@ function loadStateFromDisk(): TVState {
       {
         id: "terminal-principal",
         name: "Monitor Principal - Terminal",
+        location: "Terminal Central",
+        customBusLines: "035/034/466",
         playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
         currentVideoIndex: 0,
         isPlaying: true,
@@ -250,6 +254,8 @@ async function startServer() {
       const newMonitor = {
         id,
         name: name || `Monitor ${id.toUpperCase()}`,
+        location: id === "terminal-principal" ? "Terminal Central" : "Avenida Zumbi dos Palmares",
+        customBusLines: id === "terminal-principal" ? "035/034/466" : "035/034/461X1",
         playlist: initialPlaylist,
         currentVideoIndex: 0,
         isPlaying: true,
