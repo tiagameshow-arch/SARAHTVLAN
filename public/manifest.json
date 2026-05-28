@@ -1,0 +1,21 @@
+{
+  "short_name": "Controle TV",
+  "name": "Controle Remoto de Sinalização de Osasco",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/000000/tv-control.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/000000/tv-control.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/?mode=remote",
+  "background_color": "#080f0c",
+  "theme_color": "#080f0c",
+  "display": "standalone",
+  "orientation": "portrait"
+}

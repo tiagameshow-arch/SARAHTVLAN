@@ -1289,9 +1289,9 @@ export default function App() {
 
   if (urlMode === "remote" || urlMode === "control") {
     return (
-      <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-[340px]">
-          {renderRemotePhone()}
+      <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-2 sm:p-4">
+        <div className="w-full max-w-[420px]">
+          {renderRemotePhone(true)}
         </div>
       </div>
     );
@@ -1701,13 +1701,19 @@ export default function App() {
   // ==========================================
   // VIEW: DIGITAL PHONE REMOTE CONTROLLER
   // ==========================================
-  function renderRemotePhone() {
+  function renderRemotePhone(isStandalone = false) {
     const activeMonitor = tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0];
     
     return (
-      <div className="w-full bg-[#080f0c] text-emerald-100 rounded-[2.8rem] border-[9px] border-[#16271e] p-4 shadow-[0_25px_60px_rgba(0,0,0,0.9)] relative max-w-[325px] mx-auto select-none font-sans">
+      <div className={`w-full bg-[#080f0c] text-emerald-100 p-4 select-none font-sans transition-all ${
+        isStandalone 
+          ? "rounded-3xl border-2 border-[#16271e] shadow-2xl relative w-full mx-auto" 
+          : "rounded-[2.8rem] border-[9px] border-[#16271e] shadow-[0_25px_60px_rgba(0,0,0,0.9)] relative max-w-[325px] mx-auto"
+      }`}>
         {/* Remote Head IR Glass window representation */}
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-12 h-3 bg-[#0d1612] rounded-t-lg border-t border-emerald-500/20" />
+        {!isStandalone && (
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-12 h-3 bg-[#0d1612] rounded-t-lg border-t border-emerald-500/20" />
+        )}
 
         {/* Master branding and sub-signals box */}
         <div className="flex flex-col gap-1 mb-3.5 bg-[#031109]/90 border border-emerald-500/20 rounded-xl p-2.5 shadow-md">
