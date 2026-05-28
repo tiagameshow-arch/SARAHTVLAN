@@ -1223,7 +1223,7 @@ export default function App() {
             {monitorObj.orientation !== "portrait" && (
               <div className="w-full max-w-[260px] sm:max-w-[280px] shrink-0 transition-all duration-300">
                 <div className="w-full">
-                  {renderPassengerPhone()}
+                  {renderPassengerPhone(monitorObj)}
                 </div>
               </div>
             )}
@@ -1544,7 +1544,7 @@ export default function App() {
                     }}
                   >
                     <div className="w-full max-w-[275px] shrink-0">
-                      {renderPassengerPhone()}
+                      {renderPassengerPhone(tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0])}
                     </div>
                   </div>
 
@@ -2377,8 +2377,6 @@ interface PassengerPhoneProps {
   tvState: any;
   timeState: string;
   getWeatherIcon: (temp: string) => ReactNode;
-  slide: "weather" | "transit";
-  setSlide: Dispatch<SetStateAction<"weather" | "transit">>;
   activeMonitor?: any;
 }
 
@@ -2386,10 +2384,9 @@ function PassengerPhone({
   tvState, 
   timeState, 
   getWeatherIcon, 
-  slide, 
-  setSlide,
   activeMonitor
 }: PassengerPhoneProps) {
+  const [slide, setSlide] = useState<"weather" | "transit">("weather");
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
 
@@ -2716,15 +2713,14 @@ function PassengerPhone({
   // ==========================================
   // VIEW: THE DYNAMIC PASSENGER CELLPHONE
   // ==========================================
-  function renderPassengerPhone() {
+  function renderPassengerPhone(monitorArg?: any) {
+    const monitorObj = monitorArg || tvState.monitors.find(m => m.id === (urlMonitorId || selectedMonitorId)) || tvState.monitors[0];
     return (
       <PassengerPhone 
         tvState={tvState} 
         timeState={timeState} 
         getWeatherIcon={getWeatherIcon} 
-        slide={passengerScreenSlide}
-        setSlide={setPassengerScreenSlide}
-        activeMonitor={activeMonitor}
+        activeMonitor={monitorObj}
       />
     );
   }
