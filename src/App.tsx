@@ -20,6 +20,7 @@ import {
   Clock,
   Info,
   Maximize,
+  Minimize,
   HelpCircle,
   Megaphone,
   Settings,
@@ -245,6 +246,47 @@ export default function App() {
     return null;
   });
   const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
+  const [showCursor, setShowCursor] = useState<boolean>(true);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err: any) => {
+        console.warn("Rejeitado pedido de tela cheia:", err);
+      });
+    } else {
+      document.exitFullscreen().catch((err: any) => {
+        console.warn("Rejeitada saída de tela cheia:", err);
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (urlMode !== "tv") return;
+
+    let timeoutId: any = null;
+    const handleMouseMove = () => {
+      setShowCursor(true);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setShowCursor(false);
+      }, 3000);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    handleMouseMove();
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [urlMode]);
 
   // Auto-generate a stable dynamic monitor ID per device/PC if none is provided in the URL query parameters
   const [sessionMonitorId, setSessionMonitorId] = useState<string>(() => {
@@ -1060,164 +1102,164 @@ export default function App() {
 
     return (
       <div 
-        className="w-screen h-screen overflow-hidden font-sans flex flex-col justify-between select-none relative bg-cover bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_PRESETS[bgStyle].url})` }}
+        className={`w-screen h-screen overflow-hidden font-sans flex flex-col justify-between select-none relative bg-black text-white ${showCursor ? "cursor-default" : "cursor-none"}`}
       >
-        {/* Shadow Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/55 pointer-events-none z-0" />
-        <div className="absolute inset-0 bg-radial-vignette pointer-events-none opacity-50 z-0" />
-
-        {/* ROW 1: ELEGANT SOLID TOP BAR / CABEÇALHO DA TV */}
-        <div className="h-14 bg-black/85 backdrop-blur-md border-b border-white/10 px-4 md:px-6 flex items-center justify-between z-20 shrink-0 shadow-lg select-none">
-          {/* Leftside: Monitor details */}
-          <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-white text-xs md:text-sm font-mono tracking-widest font-black uppercase">SINAL ATIVO: {monitorObj.name}</span>
-            {monitorObj.ip && (
-              <span className="text-[10px] font-mono font-bold bg-white/10 text-stone-200 border border-white/15 px-2 py-0.5 rounded-lg ml-2 shrink-0">
-                IP: {monitorObj.ip}
-              </span>
-            )}
-          </div>
-          
-          {/* Rightside: Elegant Electronic Digital Clock */}
-          <div className="flex items-center gap-3">
-            <span className="text-emerald-400 font-mono text-base md:text-2xl font-black tracking-widest tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.45)] leading-none">{timeState}</span>
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-[7px] text-stone-450 font-extrabold uppercase tracking-widest leading-none">Horário de Brasília</span>
-              <span className="text-[6px] text-emerald-500/80 font-mono font-bold tracking-widest mt-1">RETRANSMISSOR RUA</span>
-            </div>
-          </div>
+        {/* GIANT ELECTRONIC DIGITAL CLOCK - Overlayed on Top-Left Corner for far-away viewing */}
+        <div className="absolute top-6 left-8 z-30 flex flex-col items-start gap-1 p-5 bg-black/65 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl select-none">
+          <span className="text-emerald-400 font-mono text-5xl sm:text-7xl md:text-8xl font-black tracking-widest tabular-nums leading-none drop-shadow-[0_0_15px_rgba(52,211,153,0.65)] hover:text-emerald-350 transition-colors animate-pulse">
+            {timeState}
+          </span>
+          <span className="text-[10px] sm:text-[11px] text-stone-300 font-black uppercase tracking-widest font-mono">Horário de Brasília</span>
         </div>
 
-        {/* ROW 2: SPLIT SCREEN (SMARTPHONE + TV STREAM) */}
-        <div className="flex-grow w-full relative flex items-center justify-center p-4 md:p-8 z-10 overflow-hidden">
-          <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 xl:gap-16">
-            
-            {/* Left Layer: Smartphone carrying Weather, Schedules, bus stops (hidden if portrait to maximize vertical screen coverage!) */}
-            {monitorObj.orientation !== "portrait" && (
-              <div className="w-full max-w-[260px] sm:max-w-[280px] shrink-0 transition-all duration-300">
-                <div className="w-full">
-                  {renderPassengerPhone()}
+        {/* SIGNAL METADATA TAGS - Overlayed on Top-Right Corner */}
+        <div className="absolute top-6 right-8 z-30 select-none flex flex-col items-end gap-1.5 font-mono">
+          <div className="bg-black/65 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-xl flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-white text-[11px] sm:text-xs font-black uppercase tracking-widest">SINAL ATIVO: {monitorObj.name}</span>
+          </div>
+          {monitorObj.ip && (
+            <span className="bg-black/40 backdrop-blur-sm text-[9px] sm:text-[10px] text-stone-400 border border-white/5 px-2.5 py-1 rounded-lg font-bold">
+              IP: {monitorObj.ip}
+            </span>
+          )}
+        </div>
+
+        {/* FULLSCREEN CONTROLS - Overlayed in Bottom-Right (Fades out when cursor stagnates) */}
+        <div className={`absolute bottom-28 right-8 z-30 flex items-center gap-3 transition-opacity duration-300 ${showCursor ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <button
+            onClick={toggleFullscreen}
+            className="p-3.5 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/15 hover:border-white/20 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider"
+          >
+            {isFullscreen ? <Minimize className="w-5 h-5 text-emerald-400" /> : <Maximize className="w-5 h-5 text-emerald-400" />}
+            <span>{isFullscreen ? "Sair Tela Cheia" : "Tela Cheia"}</span>
+          </button>
+        </div>
+
+        {/* BODY VIEW - LANDSCAPE OR PORTRAIT DYNAMIC ADAPTATION */}
+        {monitorObj.orientation === "portrait" ? (
+          /* PORTRAIT VIEW (VERTICAL STREET TRANSMISSION) */
+          <div className="flex-grow w-full max-w-full flex flex-col gap-6 p-6 overflow-hidden z-10 pt-36">
+            {/* Video Box Header/Screen */}
+            <div className="relative aspect-video w-full bg-black rounded-3xl border border-white/10 shadow-2xl overflow-hidden shrink-0">
+              {currentVidId ? (
+                currentVidId.startsWith("vdoninja-") ? (
+                  <iframe
+                    src={`https://vdo.ninja/?view=${currentVidId.replace("vdoninja-", "")}&autoplay=1&bgopacity=0&transparent=1${monitorObj.mute ? "&mute=1" : ""}`}
+                    allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
+                    className="absolute inset-0 w-full h-full border-none pointer-events-auto"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <YouTubePlayer
+                    videoId={currentVidId}
+                    mute={monitorObj.mute}
+                    onEnded={() => handleNextVideo(monitorObj.id)}
+                    className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
+                    title="Sinal Retransmissor de Merchandising"
+                  />
+                )
+              ) : (
+                <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
+                  <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
+                </div>
+              )}
+            </div>
+
+            {/* Grid of Weather + Bus schedules tailored specifically for portrait signage screens */}
+            <div className="flex-grow w-full grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden min-h-0">
+              {/* Weather Bento Box Layout */}
+              <div className="bg-emerald-950/45 backdrop-blur-md border border-emerald-500/20 p-6 rounded-3xl flex flex-col justify-between shadow-2xl text-center">
+                <div className="font-mono">
+                  <span className="text-xs font-bold tracking-[0.25em] text-emerald-400 uppercase bg-emerald-900/60 border border-emerald-500/30 py-1.5 px-4 rounded-full inline-block mb-3">
+                    MONITORAMENTO CLIMÁTICO
+                  </span>
+                  <div className="text-7xl font-black text-white my-3 tracking-tighter">
+                    {tvState.temperature.split(" ")[0] || "17°C"}
+                  </div>
+                  <div className="text-emerald-300 font-black uppercase tracking-wider text-base mt-2 flex items-center justify-center gap-2">
+                    {getWeatherIcon(tvState.temperature)}
+                    <span>{tvState.temperature.includes("-") ? tvState.temperature.split("-")[1].trim() : "Tempo Instável"}</span>
+                  </div>
+                </div>
+                <div className="bg-black/35 rounded-2xl p-4 border border-white/5 flex justify-around text-xs mt-3 select-none">
+                  <div>
+                    <span className="text-stone-400 block font-mono text-[9px] uppercase tracking-wider">Sensação</span>
+                    <span className="text-emerald-300 font-extrabold text-sm">{(parseInt(tvState.temperature) || 17) - 1}°C</span>
+                  </div>
+                  <div className="w-[1px] bg-white/10 h-6 align-middle" />
+                  <div>
+                    <span className="text-stone-400 block font-mono text-[9px] uppercase tracking-wider">Humidade</span>
+                    <span className="text-emerald-300 font-extrabold text-sm">74%</span>
+                  </div>
+                  <div className="w-[1px] bg-white/10 h-6 align-middle" />
+                  <div>
+                    <span className="text-stone-400 block font-mono text-[9px] uppercase tracking-wider">Ventos</span>
+                    <span className="text-emerald-300 font-extrabold text-sm">11 km/h</span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Right Layer: Physical TV Frame with Stream */}
-            <div className={`flex flex-col items-center w-full transition-all duration-300 ${
-              monitorObj.orientation === "portrait"
-                ? "max-h-full max-w-[450px]"
-                : "flex-grow max-w-[960px]"
-            }`}>
-              <div className={`relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden w-full flex flex-col justify-between items-stretch transition-all duration-300 ${
-                monitorObj.orientation === "portrait"
-                  ? "aspect-[9/16]"
-                  : "aspect-video"
-              }`}>
-                
-                {/* Simulated Screen Header */}
-                <div className="relative w-full h-8 bg-black/75 backdrop-blur-sm border-b border-white/10 px-3 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-white text-[8px] sm:text-[9.5px] font-mono tracking-wider font-extrabold uppercase truncate max-w-[200px]">
-                      {monitorObj.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-emerald-400 font-mono text-[9px] sm:text-[11px] font-black tracking-wider leading-none">{timeState}</span>
-                    <span className="text-[5px] sm:text-[6px] text-stone-400 uppercase font-bold tracking-widest leading-none">RUA</span>
-                  </div>
-                </div>
-
-                {/* Simulated Screen Video Body */}
-                <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
-                  {currentVidId ? (
-                    false ? (
-                      localVideos[currentVidId] ? (
-                        <video
-                          src={localVideos[currentVidId]?.url}
-                          autoPlay
-                          muted={monitorObj.mute}
-                          onEnded={() => handleNextVideo(monitorObj.id)}
-                          playsInline
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-stone-950/95 flex flex-col items-center justify-center text-center p-4 text-stone-400 font-mono select-auto pointer-events-auto z-30">
-                          <FileVideo className="w-8 h-8 text-yellow-500 mb-2 animate-pulse" />
-                          <p className="text-[11px] font-bold uppercase text-white tracking-wider">VÍDEO LOCAL REQUERIDO</p>
-                          <p className="text-[9px] text-stone-300 max-w-xs mt-1 leading-normal">
-                            Este monitor está programado para exibir um vídeo local do PC. Selecione o arquivo de vídeo correspondente (.MP4) neste dispositivo para iniciar a transmissão:
-                          </p>
-                          
-                          <div className="mt-3 relative">
-                            <input
-                              type="file"
-                              accept="video/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const url = URL.createObjectURL(file);
-                                  setLocalVideos(prev => ({
-                                    ...prev,
-                                    [currentVidId]: { name: file.name, url }
-                                  }));
-                                }
-                              }}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            />
-                            <button className="px-4 py-2 bg-gradient-to-r from-yellow-500/90 to-amber-600/90 hover:from-yellow-400 hover:to-amber-500 border border-yellow-300/30 text-stone-950 font-black text-[9px] rounded-xl flex items-center gap-1.5 uppercase transition-all duration-150 cursor-pointer shadow-md">
-                              Selecionar Arquivo .MP4
-                            </button>
-                          </div>
-                          
-                          <p className="text-[7.5px] text-stone-500 mt-2">ID do Slot: {currentVidId}</p>
+              {/* Transit departures Bento Box Layout */}
+              <div className="bg-stone-950/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl flex flex-col shadow-2xl overflow-hidden text-left">
+                <span className="text-xs font-mono font-bold tracking-[0.2em] text-yellow-400 uppercase bg-yellow-950/60 border border-yellow-500/30 py-1.5 px-4 rounded-full inline-block self-start mb-4 text-center">
+                  Próximas Saídas de Ônibus
+                </span>
+                <div className="flex-grow overflow-y-auto space-y-3.5 pr-1 text-left">
+                  {tvState.busLines.map((bus) => (
+                    <div key={bus.id} className="bg-white/5 border border-white/10 hover:border-emerald-500/30 px-4 py-3 rounded-2xl flex items-center justify-between transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-yellow-400 text-stone-950 rounded-xl font-black text-sm tracking-tighter">
+                          {bus.line}
                         </div>
-                      )
-                    ) : currentVidId.startsWith("vdoninja-") ? (
-                      <iframe
-                        src={`https://vdo.ninja/?view=${currentVidId.replace("vdoninja-", "")}&autoplay=1&bgopacity=0&transparent=1${monitorObj.mute ? "&mute=1" : ""}`}
-                        allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
-                        className="absolute inset-0 w-full h-full border-none pointer-events-auto"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <YouTubePlayer
-                        videoId={currentVidId}
-                        mute={monitorObj.mute}
-                        onEnded={() => handleNextVideo(monitorObj.id)}
-                        className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
-                        title="Sinal Retransmissor de Merchandising"
-                      />
-                    )
-                  ) : (
-                    <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
-                      <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
+                        <span className="text-slate-200 text-sm font-bold uppercase tracking-wider">Terminal Osasco</span>
+                      </div>
+                      <div className="font-mono text-base font-black text-emerald-400 bg-emerald-950/50 border border-emerald-500/20 px-3 py-1 rounded-xl">
+                        {bus.time}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-
-              </div>
-
-              {/* Physical Support Base Decor */}
-              <div className="flex flex-col items-center pointer-events-none select-none z-0 mt-1">
-                <div className="w-8 h-4 bg-stone-850 border-x border-stone-800 opacity-80" />
-                <div className="w-24 h-1.5 bg-stone-800 rounded-t-2xl opacity-80" />
               </div>
             </div>
-
           </div>
-        </div>
-
-        {/* ROW 3: SCROLLING TICKER NEWS FOOTER AT THE VERY BOTTOM */}
-        <div className="h-20 bg-[#001f17] border-t-4 border-yellow-400 flex items-center z-20 shrink-0 shadow-lg select-none relative">
-          <div className="h-full px-8 bg-yellow-400 text-stone-900 font-display font-black text-xs sm:text-sm uppercase flex items-center gap-2.5 shrink-0 shadow-lg">
-            <Megaphone className="w-5 h-5 text-stone-950 shrink-0" />
-            <span>NOTÍCIAS DO TERMINAL</span>
+        ) : (
+          /* LANDSCAPE VIEW (CINEMATIC FULLSCREEN VIDEO COVERAGE) */
+          <div className="absolute inset-0 w-full h-full z-0 bg-black overflow-hidden flex items-center justify-center">
+            {currentVidId ? (
+              currentVidId.startsWith("vdoninja-") ? (
+                <iframe
+                  src={`https://vdo.ninja/?view=${currentVidId.replace("vdoninja-", "")}&autoplay=1&bgopacity=0&transparent=1${monitorObj.mute ? "&mute=1" : ""}`}
+                  allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
+                  className="absolute inset-0 w-full h-full border-none pointer-events-auto"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <YouTubePlayer
+                  videoId={currentVidId}
+                  mute={monitorObj.mute}
+                  onEnded={() => handleNextVideo(monitorObj.id)}
+                  className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
+                  title="Sinal Retransmissor de Merchandising"
+                />
+              )
+            ) : (
+              <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
+                <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
+              </div>
+            )}
           </div>
-          <div className="overflow-hidden relative w-full h-full flex items-center text-white">
-            <div className="absolute whitespace-nowrap animate-marquee flex items-center text-base sm:text-lg md:text-xl font-black uppercase tracking-wider pl-6">
-              <span className="text-yellow-400 mr-4 text-sm sm:text-base">📢</span>
+        )}
+
+        {/* ROW 3: SCROLLING TICKER NEWS FOOTER AT THE VERY BOTTOM - Extensively Enlarged */}
+        <div className="h-24 bg-[#001f17]/95 border-t-4 border-yellow-400 flex items-center z-20 shrink-0 shadow-lg select-none relative">
+          <div className="h-full px-8 bg-yellow-400 text-stone-900 font-display font-black text-sm sm:text-lg uppercase flex items-center gap-3 shrink-0 shadow-xl z-30 relative">
+            <Megaphone className="w-6 h-6 text-stone-950 shrink-0 animate-bounce" />
+            <span className="tracking-wider">URGENTE</span>
+          </div>
+          <div className="overflow-hidden relative w-full h-full flex items-center text-white z-10 bg-black/10">
+            <div className="absolute whitespace-nowrap animate-marquee flex items-center text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-widest pl-8">
+              <span className="text-yellow-400 mr-8 text-xl sm:text-2xl">📢</span>
               <span>{tvState.newsTicker}</span>
             </div>
           </div>
@@ -2182,7 +2224,7 @@ function PassengerPhone({
 
         {/* Dynamic header of the phone */}
         <div className="pt-4 px-4 z-10 flex justify-between items-center text-[9px] font-mono font-bold text-emerald-400 mb-2 drop-shadow-md">
-          <span className="tracking-widest bg-emerald-950/80 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[8.5px]">{clockShort}</span>
+          <span className="tracking-widest bg-emerald-950/80 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[8.5px]">SINAL OK</span>
           <div className="flex items-center gap-1.5">
             {/* Wifi Inline Icon */}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-emerald-400 inline-block">

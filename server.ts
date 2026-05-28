@@ -167,6 +167,9 @@ async function startServer() {
   // Support JSON request parser
   app.use(express.json());
 
+  // Track explicitly deleted monitors to prevent background pings of resurrecting them automatically
+  const deletedMonitorIds = new Set<string>();
+
   // API Route - Get current state
   app.get("/api/state", (req, res) => {
     res.json(tvState);
@@ -176,6 +179,22 @@ async function startServer() {
   app.post("/api/state", (req, res) => {
     const { temperature, newsTicker, busLines, monitors } = req.body;
     
+    if (monitors !== undefined && Array.isArray(monitors)) {
+      // Find monitors that were in the original tvState but are not in the new array
+      const oldIds = tvState.monitors.map(m => m.id);
+      const newIds = monitors.map(m => m.id);
+      oldIds.forEach(id => {
+        if (!newIds.includes(id)) {
+          deletedMonitorIds.add(id);
+          console.log(`[Presence] Monitor adicionado à lista de exclusão voluntária: ${id}`);
+        }
+      });
+      // When a monitor is added/present, ensure it's removed of deleted list
+      newIds.forEach(id => {
+        deletedMonitorIds.delete(id);
+      });
+    }
+
     if (temperature !== undefined) tvState.temperature = temperature;
     if (newsTicker !== undefined) tvState.newsTicker = newsTicker;
     if (busLines !== undefined && Array.isArray(busLines)) tvState.busLines = busLines;
@@ -194,6 +213,11 @@ async function startServer() {
     const { id, name, orientation } = req.body;
     if (!id) {
       return res.status(400).json({ error: "Missing monitor id" });
+    }
+
+    // Ignore ping if this monitor was explicitly deleted inside the dashboard
+    if (deletedMonitorIds.has(id)) {
+      return res.json({ success: false, error: "Monitor was explicitly deleted", state: tvState });
     }
 
     let clientIp = (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "127.0.0.1").split(",")[0].trim();
@@ -230,13 +254,9 @@ async function startServer() {
       changed = true;
       console.log(`[Presence] Novo monitor registrado dinamicamente por ping (${clientIp}): ${id}`);
     } else {
-      // Sync parameters if passed
+      // Sync parameters safely - DO NOT override orientation or playlist of the server using client-side pings!
+      // Server-side / remote control is the source of truth for orientation and playlist!
       const monitor = tvState.monitors[existingIndex];
-      // Keep orientation in sync if provided
-      if (orientation && monitor.orientation !== orientation) {
-        monitor.orientation = orientation;
-        changed = true;
-      }
       if (monitor.ip !== clientIp) {
         monitor.ip = clientIp;
         changed = true;
