@@ -22,6 +22,7 @@ interface MonitorState {
   orientation?: "landscape" | "portrait";
   ip?: string;
   isOnline?: boolean;
+  forceRefreshTime?: string;
 }
 
 interface TVState {

@@ -13,6 +13,7 @@ export interface MonitorState {
   mute: boolean;
   orientation?: "landscape" | "portrait";
   ip?: string;
+  forceRefreshTime?: string;
 }
 
 export interface TVState {

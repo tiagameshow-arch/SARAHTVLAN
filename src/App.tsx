@@ -392,6 +392,27 @@ export default function App() {
     };
   });
 
+  const lastProcessedRefreshRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (urlMode !== "tv") return;
+    const targetMonitorId = urlMonitorId || (tvState.monitors && tvState.monitors[0] ? tvState.monitors[0].id : "terminal-principal");
+    const currentMonitor = tvState.monitors.find(m => m.id === targetMonitorId) || tvState.monitors[0];
+    
+    if (currentMonitor && currentMonitor.forceRefreshTime) {
+      if (lastProcessedRefreshRef.current === undefined) {
+        // First look initialization on load
+        lastProcessedRefreshRef.current = currentMonitor.forceRefreshTime;
+      } else if (lastProcessedRefreshRef.current !== currentMonitor.forceRefreshTime) {
+        console.log(`[Reload] Remotely requesting F5 reload for monitor ID: ${currentMonitor.id}`);
+        lastProcessedRefreshRef.current = currentMonitor.forceRefreshTime;
+        setTimeout(() => {
+          window.location.reload();
+        }, 150);
+      }
+    }
+  }, [tvState.monitors, urlMode, urlMonitorId]);
+
   const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
 
   // Active monitor selected for visual preview in Aba 2
@@ -969,6 +990,16 @@ export default function App() {
     const updated = tvState.monitors.map(m => {
       if (m.id === monitorId) {
         return { ...m, orientation: m.orientation === "portrait" ? "landscape" : "portrait" };
+      }
+      return m;
+    });
+    syncMonitorsToServer(updated);
+  };
+
+  const handleRemoteForceRefresh = (monitorId: string) => {
+    const updated = tvState.monitors.map(m => {
+      if (m.id === monitorId) {
+        return { ...m, forceRefreshTime: new Date().toISOString() };
       }
       return m;
     });
@@ -2080,7 +2111,7 @@ export default function App() {
             {/* Simulation Controls (Rotation Layout) */}
             <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5">
               <span className="text-[8px] text-stone-450 font-extrabold uppercase tracking-wide block">
-                Controles de Layout e Giro
+                Giro, Layout e Reset da Tela
               </span>
               <button
                 type="button"
@@ -2095,6 +2126,19 @@ export default function App() {
               >
                 <Smartphone className={`w-3.5 h-3.5 ${activeMonitor?.orientation === "portrait" ? "text-amber-400 rotate-90" : "text-stone-400"} transition-transform duration-300`} />
                 <span className="tracking-wide uppercase font-sans leading-none">GIRAR ORIENTAÇÃO DA TELA (RET/PAIS)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMonitor) {
+                    handleRemoteForceRefresh(activeMonitor.id);
+                  }
+                }}
+                className="py-2.5 px-3 w-full bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md font-sans cursor-pointer mt-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="tracking-wide uppercase font-sans leading-none">RECARREGAR TELA REMOTAMENTE (F5)</span>
               </button>
             </div>
           </div>
