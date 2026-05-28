@@ -94,6 +94,8 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           fs: 0,
           disablekb: 1,
           playsinline: 1,
+          loop: 1,
+          playlist: videoId, // Required by YouTube API to enable the native loop command
         },
         events: {
           onReady: (event: any) => {
@@ -121,6 +123,10 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           onStateChange: (event: any) => {
             if (active && event.data === 0) {
               onEnded();
+              // Prevent stopping if there is only 1 video or if the index transition is silent
+              try {
+                event.target.playVideo();
+              } catch (err) {}
             }
           },
           onError: (event: any) => {
@@ -1034,7 +1040,12 @@ export default function App() {
   // Standalone modes switcher
   if (urlMode === "tv") {
     const targetMonitorId = urlMonitorId || "terminal-principal";
-    const monitorObj = tvState.monitors.find(m => m.id === targetMonitorId) || tvState.monitors[0];
+    // If an explicit monitor is requested via URL, we wait for it to be found/registered
+    // instead of immediately falling back to the primary monitor while loading.
+    let monitorObj = tvState.monitors.find(m => m.id === targetMonitorId);
+    if (!monitorObj && !urlMonitorId) {
+      monitorObj = tvState.monitors[0];
+    }
     
     if (!monitorObj) {
       return (
@@ -1083,17 +1094,19 @@ export default function App() {
         <div className="flex-grow w-full relative flex items-center justify-center p-4 md:p-8 z-10 overflow-hidden">
           <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 xl:gap-16">
             
-            {/* Left Layer: Smartphone carrying Weather, Schedules, bus stops */}
-            <div className="w-full max-w-[260px] sm:max-w-[280px] shrink-0 transition-all duration-300">
-              <div className="w-full">
-                {renderPassengerPhone()}
+            {/* Left Layer: Smartphone carrying Weather, Schedules, bus stops (hidden if portrait to maximize vertical screen coverage!) */}
+            {monitorObj.orientation !== "portrait" && (
+              <div className="w-full max-w-[260px] sm:max-w-[280px] shrink-0 transition-all duration-300">
+                <div className="w-full">
+                  {renderPassengerPhone()}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Right Layer: Physical TV Frame with Stream */}
             <div className={`flex flex-col items-center w-full transition-all duration-300 ${
               monitorObj.orientation === "portrait"
-                ? "max-w-[420px]"
+                ? "max-h-full max-w-[450px]"
                 : "flex-grow max-w-[960px]"
             }`}>
               <div className={`relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden w-full flex flex-col justify-between items-stretch transition-all duration-300 ${
@@ -1353,23 +1366,12 @@ export default function App() {
                 
                 <div>
                   <h3 className="text-white font-display text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                    <QrCode className="w-5 h-5 text-emerald-400" />
+                    <Smartphone className="w-5 h-5 text-emerald-400" />
                     Controle no Celular
                   </h3>
                   <p className="text-stone-400 text-[11px] leading-relaxed mt-1.5">
-                    Escaneie o QR Code ou copie o link abaixo no seu celular para carregar a tela de controle cheia e exclusiva, sem o restante da página!
+                    Copie o link abaixo ou clique para abrir a tela de controle cheia e exclusiva no seu celular ou em outra aba!
                   </p>
-                </div>
-
-                {/* QR Code Canvas Representation using free public api */}
-                <div className="flex flex-col items-center bg-white p-3.5 rounded-2xl border border-white/5 self-center shadow-lg">
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(window.location.origin + "/?mode=control")}`} 
-                    alt="QR Code de Pareamento do Controle"
-                    referrerPolicy="no-referrer"
-                    className="w-[130px] h-[130px]"
-                  />
-                  <span className="text-[8.5px] font-mono font-black text-stone-900 uppercase tracking-widest mt-2">{`>> LER NO CELULAR >>`}</span>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -1841,17 +1843,8 @@ export default function App() {
                 VINCULAR NO OUTRO PC OU TV
               </span>
               <p className="text-[7px] text-stone-400 leading-tight text-center">
-                Selecione o monitor acima, abra o link específico ou escaneie o QR Code abaixo no outro computador/TV física:
+                Selecione o monitor acima, copie o link e abra-o no navegador da sua TV física ou outro PC de transmissão:
               </p>
-              
-              <div className="bg-white p-1 rounded-lg self-center shadow-inner mt-0.5">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + "/?mode=tv&monitor=" + selectedMonitorId)}`} 
-                  alt="QR Code do Sinal"
-                  referrerPolicy="no-referrer"
-                  className="w-[70px] h-[70px] block"
-                />
-              </div>
 
               <div className="flex gap-1 mt-0.5">
                 <button
