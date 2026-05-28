@@ -1304,17 +1304,13 @@ export default function App() {
 
         {/* ROW 3: SCROLLING TICKER NEWS FOOTER AT THE VERY BOTTOM - CO-BRANDED WITH SARAHGAMES LOGO */}
         <div className="h-24 bg-[#090209] border-t-4 border-[#ee1d82] flex items-center z-20 shrink-0 shadow-lg select-none relative">
-          <div className="h-full px-6 bg-[#ee1d82] text-white font-sans font-black text-xs sm:text-lg uppercase flex items-center gap-3.5 shrink-0 shadow-2xl z-10 border-r border-[#ff53a6]/50">
+          <div className="h-full px-8 bg-[#ee1d82] flex items-center justify-center shrink-0 shadow-2xl z-10 border-r border-[#ff53a6]/50">
             <img 
               src="/sarah_games.png" 
-              className="h-16 w-16 object-contain rounded-full shadow-[0_0_15px_rgba(238,29,130,0.6)] border-2 border-white animate-pulse" 
+              className="h-16 w-16 object-contain rounded-full shadow-[0_0_15px_rgba(238,29,130,0.75)] border-2 border-white animate-pulse" 
               alt="SarahGames Logo"
               referrerPolicy="no-referrer"
             />
-            <div className="flex flex-col leading-tight">
-              <span className="font-extrabold tracking-wider text-stone-950 text-[9px] sm:text-xs">PATROCÍNIO EXCLUSIVO</span>
-              <span className="font-black text-white text-sm sm:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">SARAH GAMES</span>
-            </div>
           </div>
           <div className="overflow-hidden relative w-full h-full flex items-center text-white bg-gradient-to-r from-stone-950 to-[#120110]">
             <div className="absolute whitespace-nowrap animate-marquee flex items-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-widest pl-6">
@@ -1722,17 +1718,13 @@ export default function App() {
 
               {/* LOWER TICKER NEWS OVERLAY FOR MAX EMBEDDED INTEGRATION - CO-BRANDED WITH SARAHGAMES */}
               <div className="bg-[#090209] border border-[#ee1d82]/40 p-3 rounded-2xl flex items-center overflow-hidden h-20 shadow-2xl relative z-20">
-                <div className="px-4 py-1.5 bg-[#ee1d82] text-white font-sans font-black text-xs uppercase h-full flex items-center gap-2.5 shrink-0 rounded-lg shadow-md">
+                <div className="h-full px-4 bg-[#ee1d82] flex items-center justify-center shrink-0 rounded-lg shadow-md">
                   <img 
                     src="/sarah_games.png" 
-                    className="h-9 w-9 object-contain rounded-full shadow-[0_0_8px_rgba(238,29,130,0.5)] border border-white animate-pulse" 
+                    className="h-11 w-11 object-contain rounded-full shadow-[0_0_8px_rgba(238,29,130,0.7)] border border-white animate-pulse" 
                     alt="SarahGames Logo"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="flex flex-col leading-none">
-                    <span className="text-[7.5px] text-stone-950 font-extrabold tracking-wider">PREVISÃO / SINAL</span>
-                    <span className="text-white text-[11px] font-black tracking-tight mt-0.5">SARAH GAMES</span>
-                  </div>
                 </div>
                 <div className="overflow-hidden relative w-full h-full flex items-center text-white/95">
                   <div className="absolute whitespace-nowrap animate-marquee flex items-center text-lg sm:text-xl font-black uppercase tracking-wider select-none pl-6">
@@ -2387,6 +2379,7 @@ interface PassengerPhoneProps {
   getWeatherIcon: (temp: string) => ReactNode;
   slide: "weather" | "transit";
   setSlide: Dispatch<SetStateAction<"weather" | "transit">>;
+  activeMonitor?: any;
 }
 
 function PassengerPhone({ 
@@ -2394,10 +2387,19 @@ function PassengerPhone({
   timeState, 
   getWeatherIcon, 
   slide, 
-  setSlide
+  setSlide,
+  activeMonitor
 }: PassengerPhoneProps) {
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
+
+  const getLineTime = (lineNumber: string) => {
+    const found = tvState.busLines?.find((b: any) => b.line.trim().toUpperCase() === lineNumber.trim().toUpperCase());
+    if (found) return found.time;
+    const hash = lineNumber.split('').reduce((accValue: number, char: string) => accValue + char.charCodeAt(0), 0);
+    const minute = ((new Date().getMinutes() + hash) % 25) + 3;
+    return `${minute} MIN`;
+  };
 
   useEffect(() => {
     if (!isAutoplay) {
@@ -2575,7 +2577,9 @@ function PassengerPhone({
               
               <div className="border-b border-slate-800 pb-2">
                 <h3 className="text-white text-xs font-display font-medium tracking-wide">CIRCULAÇÃO DE DUPLO FLUXO</h3>
-                <p className="text-[9px] text-slate-400 mt-0.5">Próximas partidas para terminais de Carapicuíba</p>
+                <p className="text-[9px] text-emerald-400 mt-1 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                  📍 Ponto: <span className="text-white font-black">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
+                </p>
                 <div className="w-12 h-0.5 bg-yellow-400 mt-1.5" />
               </div>
 
@@ -2585,29 +2589,38 @@ function PassengerPhone({
                   <Bus className="w-3 h-3 text-yellow-400 shrink-0" /> PAINEL SINALIZADOR
                 </span>
 
-                {tvState.busLines.length > 0 ? (
-                  tvState.busLines.map((bus: any) => (
-                    <div
-                      key={bus.id}
-                      className="bg-slate-900/90 border border-slate-800 px-3 py-2.5 rounded-xl flex justify-between items-center shadow-sm hover:border-slate-800 transition"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="bg-yellow-400 text-stone-950 font-mono text-[10px] px-2 py-0.5 rounded-md font-black leading-none">
-                          {bus.line}
-                        </span>
-                        <span className="text-[10px] text-white font-extrabold tracking-wide uppercase">CIRCULAR</span>
+                {(() => {
+                  const lineGroup = (activeMonitor?.customBusLines || "035/034/461X1").split("/");
+                  const validLines = lineGroup.filter((line: string) => line.trim());
+                  if (validLines.length === 0) {
+                    return (
+                      <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-dashed border-slate-800 text-[10px] text-slate-550 select-none">
+                        Nenhum ônibus programado para agora.
                       </div>
-                      <div className="flex items-center gap-1 text-emerald-400 bg-emerald-950/40 border border-[#10b981]/30 px-2 py-0.5 rounded-lg text-[10px] font-black font-mono">
-                        <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                        <span>{bus.time}</span>
+                    );
+                  }
+                  return validLines.map((line: string, i: number) => {
+                    const cleanLine = line.trim();
+                    const time = getLineTime(cleanLine);
+                    return (
+                      <div
+                        key={i}
+                        className="bg-slate-900/90 border border-slate-800 px-3 py-2.5 rounded-xl flex justify-between items-center shadow-sm hover:border-slate-800 transition animate-fade-in"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="bg-yellow-405 text-stone-950 font-mono text-[10px] px-2 py-0.5 rounded-md font-black leading-none">
+                            {cleanLine}
+                          </span>
+                          <span className="text-[10px] text-white font-extrabold tracking-wide uppercase">CIRCULAR</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-emerald-400 bg-emerald-950/40 border border-[#10b981]/30 px-2 py-0.5 rounded-lg text-[10px] font-black font-mono">
+                          <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>{time}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-dashed border-slate-800 text-[10px] text-slate-550 select-none">
-                    Nenhum ônibus programado para agora.
-                  </div>
-                )}
+                    );
+                  });
+                })()}
               </div>
 
               {/* NEWS AND ALERTS */}
@@ -2711,6 +2724,7 @@ function PassengerPhone({
         getWeatherIcon={getWeatherIcon} 
         slide={passengerScreenSlide}
         setSlide={setPassengerScreenSlide}
+        activeMonitor={activeMonitor}
       />
     );
   }
