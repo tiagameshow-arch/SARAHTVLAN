@@ -1983,6 +1983,19 @@ export default function App() {
               </button>
             </div>
 
+            {/* Dicas de Funcionamento de Vídeo / Ajuda */}
+            <div className="bg-[#181105] border border-amber-500/20 rounded-xl p-2.5 text-[8.5px] leading-snug text-amber-200 flex flex-col gap-1.5 text-left">
+              <div className="font-sans font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1 text-[9px]">
+                <span>🚨 AJUDA COM SEUS VÍDEOS:</span>
+              </div>
+              <p className="font-sans font-medium text-stone-300">
+                1. <b>YouTube Privado NÃO RODA:</b> Vídeos privados exigem senha/login e são bloqueados para exibição em sites externos pelo YouTube. <b className="text-amber-400">Solução:</b> Altere o vídeo na sua conta do YouTube para <b>"Não listado" (Unlisted)</b>. Assim ele continua seguro/oculto, mas roda perfeitamente em sua sinalização!
+              </p>
+              <p className="font-sans font-medium text-stone-300">
+                2. <b>VDO.Ninja:</b> Precisa de acesso à câmera/microfone. Se abrir dentro do editor do site, o navegador pode bloquear por segurança. <b className="text-emerald-400">Solução:</b> Copie o link de visualização da TV e <b>"Abra em Nova Aba"</b> ou em outra tela para liberar a câmera sem restrições!
+              </p>
+            </div>
+
             {/* Tracklist layout for active monitor */}
             <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto mt-1 scrollbar-thin pr-1">
               {activeMonitor?.playlist.map((vidId, idx) => {
