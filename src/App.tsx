@@ -218,7 +218,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"control" | "monitor">("control");
 
   // Phone remote control tab state
-  const [phoneControlTab, setPhoneControlTab] = useState<"telas" | "playlist" | "ajustes">("telas");
+  const [phoneControlTab, setPhoneControlTab] = useState<"telas" | "playlist" | "onibus" | "ajustes">("telas");
   // Custom video input inside the mobile phone remote control
   const [newPhoneVideoInput, setNewPhoneVideoInput] = useState<string>("");
 
@@ -1302,15 +1302,23 @@ export default function App() {
           </button>
         </div>
 
-        {/* ROW 3: SCROLLING TICKER NEWS FOOTER AT THE VERY BOTTOM */}
-        <div className="h-24 bg-[#001f17] border-t-4 border-yellow-400 flex items-center z-20 shrink-0 shadow-lg select-none relative">
-          <div className="h-full px-8 bg-yellow-400 text-stone-900 font-display font-black text-xs sm:text-lg uppercase flex items-center gap-2.5 shrink-0 shadow-lg z-10">
-            <Megaphone className="w-5 h-5 text-stone-950 shrink-0 animate-bounce" />
-            <span>NOTÍCIAS DO TERMINAL</span>
+        {/* ROW 3: SCROLLING TICKER NEWS FOOTER AT THE VERY BOTTOM - CO-BRANDED WITH SARAHGAMES LOGO */}
+        <div className="h-24 bg-[#090209] border-t-4 border-[#ee1d82] flex items-center z-20 shrink-0 shadow-lg select-none relative">
+          <div className="h-full px-6 bg-[#ee1d82] text-white font-sans font-black text-xs sm:text-lg uppercase flex items-center gap-3.5 shrink-0 shadow-2xl z-10 border-r border-[#ff53a6]/50">
+            <img 
+              src="/sarah_games.png" 
+              className="h-16 w-16 object-contain rounded-full shadow-[0_0_15px_rgba(238,29,130,0.6)] border-2 border-white animate-pulse" 
+              alt="SarahGames Logo"
+              referrerPolicy="no-referrer"
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="font-extrabold tracking-wider text-stone-950 text-[9px] sm:text-xs">PATROCÍNIO EXCLUSIVO</span>
+              <span className="font-black text-white text-sm sm:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">SARAH GAMES</span>
+            </div>
           </div>
-          <div className="overflow-hidden relative w-full h-full flex items-center text-white">
+          <div className="overflow-hidden relative w-full h-full flex items-center text-white bg-gradient-to-r from-stone-950 to-[#120110]">
             <div className="absolute whitespace-nowrap animate-marquee flex items-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-widest pl-6">
-              <span className="text-yellow-400 mr-4 text-xl sm:text-2xl">📢</span>
+              <span className="text-[#ee1d82] mr-4 text-xl sm:text-2xl">🎮</span>
               <span>{tvState.newsTicker}</span>
             </div>
           </div>
@@ -1712,15 +1720,23 @@ export default function App() {
                 <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-5" />
               </div>
 
-              {/* LOWER TICKER NEWS OVERLAY FOR MAX EMBEDDED INTEGRATION */}
-              <div className="bg-[#001f17] border border-yellow-405/45 p-3.5 rounded-2xl flex items-center overflow-hidden h-20 shadow-2xl relative z-20">
-                <div className="px-5 py-2 bg-yellow-400 text-stone-900 font-display font-black text-sm uppercase h-full flex items-center gap-2.5 shrink-0 rounded-lg shadow-md">
-                  <Megaphone className="w-5 h-5 text-stone-950 shrink-0" />
-                  <span>SINAL DE NOTÍCIAS DO TERMINAL</span>
+              {/* LOWER TICKER NEWS OVERLAY FOR MAX EMBEDDED INTEGRATION - CO-BRANDED WITH SARAHGAMES */}
+              <div className="bg-[#090209] border border-[#ee1d82]/40 p-3 rounded-2xl flex items-center overflow-hidden h-20 shadow-2xl relative z-20">
+                <div className="px-4 py-1.5 bg-[#ee1d82] text-white font-sans font-black text-xs uppercase h-full flex items-center gap-2.5 shrink-0 rounded-lg shadow-md">
+                  <img 
+                    src="/sarah_games.png" 
+                    className="h-9 w-9 object-contain rounded-full shadow-[0_0_8px_rgba(238,29,130,0.5)] border border-white animate-pulse" 
+                    alt="SarahGames Logo"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="flex flex-col leading-none">
+                    <span className="text-[7.5px] text-stone-950 font-extrabold tracking-wider">PREVISÃO / SINAL</span>
+                    <span className="text-white text-[11px] font-black tracking-tight mt-0.5">SARAH GAMES</span>
+                  </div>
                 </div>
                 <div className="overflow-hidden relative w-full h-full flex items-center text-white/95">
-                  <div className="absolute whitespace-nowrap animate-marquee flex items-center text-lg sm:text-xl md:text-2xl font-black uppercase tracking-wider select-none pl-6">
-                    <span className="text-yellow-405 mr-3 text-xl sm:text-2xl">📢</span>
+                  <div className="absolute whitespace-nowrap animate-marquee flex items-center text-lg sm:text-xl font-black uppercase tracking-wider select-none pl-6">
+                    <span className="text-[#ee1d82] mr-3 text-lg sm:text-xl">🎮</span>
                     {tvState.newsTicker}
                   </div>
                 </div>
@@ -1885,11 +1901,11 @@ export default function App() {
         </div>
 
         {/* Sleek Tab Bar inside the cell phone screen area with active glow status borders */}
-        <div className="grid grid-cols-3 gap-1 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
+        <div className="grid grid-cols-4 gap-1 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
           <button
             type="button"
             onClick={() => setPhoneControlTab("telas")}
-            className={`py-2 text-[8.5px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "telas" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "telas" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <Tv className="w-3.5 h-3.5" />
             Telas
@@ -1897,15 +1913,23 @@ export default function App() {
           <button
             type="button"
             onClick={() => setPhoneControlTab("playlist")}
-            className={`py-2 text-[8.5px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "playlist" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "playlist" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <ListMusic className="w-3.5 h-3.5" />
             Playlist
           </button>
           <button
             type="button"
+            onClick={() => setPhoneControlTab("onibus")}
+            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "onibus" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+          >
+            <Bus className="w-3.5 h-3.5" />
+            Ônibus
+          </button>
+          <button
+            type="button"
             onClick={() => setPhoneControlTab("ajustes")}
-            className={`py-2 text-[8.5px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "ajustes" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "ajustes" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <Settings className="w-3.5 h-3.5" />
             Ajustes
@@ -2210,7 +2234,66 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: AJUSTES DA TELA ATIVA */}
+        {/* TAB 3: ÔNIBUS DA TELA ATIVA */}
+        {phoneControlTab === "onibus" && activeMonitor && (
+          <div className="mb-3.5 bg-stone-950/40 p-2.5 rounded-2xl border border-stone-900/60 flex flex-col gap-3 font-sans text-left">
+            <span className="text-[7.5px] font-mono font-bold text-center text-emerald-400 uppercase tracking-widest block mb-0.5 animate-pulse">
+              ➔ HORÁRIOS & LOCALIZAÇÃO
+            </span>
+
+            {/* Current monitor location information info card */}
+            <div className="bg-[#03150d] border border-emerald-500/15 p-2 rounded-xl text-[8.5px] leading-relaxed">
+              <span className="text-emerald-400 font-black tracking-wider uppercase block text-[7px] mb-1">MONITOR SELECIONADO:</span>
+              <p className="font-bold text-white uppercase">{activeMonitor.name}</p>
+              <p className="text-stone-300 mt-1">📍 Ponto: <span className="text-yellow-455 font-bold">{activeMonitor.location || "Avenida Zumbi dos Palmares"}</span></p>
+              <p className="text-stone-300 mt-0.5">🚌 Linhas: <span className="text-emerald-400 font-mono font-black">{activeMonitor.customBusLines || "035/034/461X1"}</span></p>
+            </div>
+
+            {/* Editing fields */}
+            <div className="flex flex-col gap-2 bg-stone-950/85 border border-stone-850 p-2 rounded-xl">
+              <div>
+                <label className="text-[7.5px] text-stone-400 font-extrabold uppercase tracking-widest block">
+                  📍 Ponto / Rua / Localização Física
+                </label>
+                <input
+                  type="text"
+                  value={locationValue}
+                  onChange={(e) => setLocationValue(e.target.value)}
+                  placeholder="Ex: Av. Zumbi dos Palmares..."
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="text-[7.5px] text-stone-400 font-extrabold uppercase tracking-widest block">
+                  🚌 Linhas de Ônibus (separadas por "/")
+                </label>
+                <input
+                  type="text"
+                  value={customBusLinesValue}
+                  onChange={(e) => setCustomBusLinesValue(e.target.value)}
+                  placeholder="Ex: 035/034/461X1"
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMonitor) {
+                    handleUpdateMonitorDetails(activeMonitor.id, activeMonitor.name, locationValue, customBusLinesValue);
+                    alert("Dados salvos e transmitidos com sucesso para a TV!");
+                  }
+                }}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-stone-950 font-black text-[9px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center mt-1"
+              >
+                Salvar Localidade & Linhas
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: AJUSTES DA TELA ATIVA */}
         {phoneControlTab === "ajustes" && (
           <div className="mb-3.5 bg-stone-950/40 p-2 rounded-2xl border border-stone-900/60 flex flex-col gap-2.5 font-sans">
             <span className="text-[7px] font-mono font-bold text-stone-500 uppercase block tracking-widest text-center">
@@ -2228,33 +2311,7 @@ export default function App() {
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   placeholder="Nome do monitor..."
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
-                />
-              </div>
-
-              <div>
-                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
-                  Localização / Rua Física
-                </label>
-                <input
-                  type="text"
-                  value={locationValue}
-                  onChange={(e) => setLocationValue(e.target.value)}
-                  placeholder="Ex: Rua Zumbi dos Palmares..."
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
-                />
-              </div>
-
-              <div>
-                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
-                  Linhas de Ônibus (separadas por barra)
-                </label>
-                <input
-                  type="text"
-                  value={customBusLinesValue}
-                  onChange={(e) => setCustomBusLinesValue(e.target.value)}
-                  placeholder="Ex: 035/034/461X1"
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
+                  className="w-full mt-1 bg-[#020d08] border border-[#212121] text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
                 />
               </div>
 
@@ -2262,13 +2319,13 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   if (activeMonitor) {
-                    handleUpdateMonitorDetails(activeMonitor.id, renameValue, locationValue, customBusLinesValue);
-                    alert("Configurações do monitor atualizadas com sucesso!");
+                    handleRenameMonitor(activeMonitor.id, renameValue);
+                    alert("Identificação do monitor atualizada com sucesso!");
                   }
                 }}
-                className="w-full mt-1 bg-yellow-400 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9.5px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center"
+                className="w-full mt-1 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9.5px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center"
               >
-                Salvar Configurações
+                Salvar Nome
               </button>
             </div>
 
