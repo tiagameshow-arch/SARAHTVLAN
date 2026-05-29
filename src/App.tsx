@@ -488,8 +488,8 @@ export default function App() {
   // Slide state inside the phone remote controller: rotates between "weather" and "transit" (bus stop schedules)
   const [phoneRotateSlide, setPhoneRotateSlide] = useState<"weather" | "transit">("weather");
 
-  // Slide state inside the passenger cellphone: "weather" (immersion wallpaper) or "transit" (bus stops)
-  const [passengerScreenSlide, setPassengerScreenSlide] = useState<"weather" | "transit">("weather");
+  // Slide state inside the passenger cellphone: rotates between weather, individual buses, and live news portals
+  const [passengerScreenSlide, setPassengerScreenSlide] = useState<string>("weather");
 
   // URL mode selector (supports full-screen preview modes: TV standalone or passenger phone standalone)
   const [urlMode, setUrlMode] = useState<string | null>(() => {
@@ -2794,9 +2794,19 @@ interface PassengerPhoneProps {
   timeState: string;
   getWeatherIcon: (temp: string) => ReactNode;
   activeMonitor?: any;
-  slide?: "weather" | "transit";
-  setSlide?: (slide: "weather" | "transit") => void;
+  slide?: string;
+  setSlide?: (slide: string) => void;
 }
+
+const SLIDES_SEQUENCE = [
+  "weather",
+  "bus-035",
+  "bus-034",
+  "bus-466x1",
+  "news-g1",
+  "news-ge",
+  "news-cnn"
+];
 
 function PassengerPhone({ 
   tvState, 
@@ -2806,7 +2816,7 @@ function PassengerPhone({
   slide: propSlide,
   setSlide: propSetSlide
 }: PassengerPhoneProps) {
-  const [localSlide, setLocalSlide] = useState<"weather" | "transit">("weather");
+  const [localSlide, setLocalSlide] = useState<string>("weather");
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
 
@@ -2828,11 +2838,13 @@ function PassengerPhone({
     }
 
     const stepMs = 100;
-    const durationMs = 6000; // 6 seconds per screen
+    const durationMs = 8000; // 8 seconds per screen to allow reading news article and routes list
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          setSlide(slide === "weather" ? "transit" : "weather");
+          const currentIndex = SLIDES_SEQUENCE.indexOf(slide);
+          const nextIndex = (currentIndex + 1) % SLIDES_SEQUENCE.length;
+          setSlide(SLIDES_SEQUENCE[nextIndex]);
           return 0;
         }
         return prev + (stepMs / durationMs) * 100;
@@ -2842,15 +2854,13 @@ function PassengerPhone({
     return () => clearInterval(interval);
   }, [isAutoplay, slide, setSlide]);
 
-  const handleSetSlide = (newSlide: "weather" | "transit") => {
+  const handleSetSlide = (newSlide: string) => {
     setSlide(newSlide);
     setProgress(0);
   };
 
   // Extracts current temperature integer
   const currTemp = parseInt(tvState.temperature) || 17;
-  const maxTemp = currTemp + 1;
-  const minTemp = currTemp - 4;
   const sensation = currTemp - 1;
 
   // Extra clock strings for top of screen (hh:mm format)
@@ -2900,7 +2910,7 @@ function PassengerPhone({
               <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className={`text-[7.5px] tracking-tighter border font-extrabold rounded px-1 scale-90 transition-colors duration-300 ${
-              slide === "weather" ? "bg-emerald-950 border-emerald-500/25 text-emerald-400" : "bg-stone-250 border-stone-300 text-stone-705"
+              slide === "weather" ? "bg-emerald-950 border-emerald-500/25 text-emerald-400" : "bg-stone-250 border-stone-300 text-stone-701"
             }`}>5G_STABLE</span>
             {/* Battery Indicator with 94% */}
             <div className={`h-3 w-[22px] border rounded-xs flex items-center p-0.5 relative gap-[1.5px] transition-colors duration-300 ${
@@ -2909,7 +2919,7 @@ function PassengerPhone({
               <div className={`h-full w-[94%] rounded-3xs transition-colors duration-300 ${
                 slide === "weather" ? "bg-emerald-400" : "bg-stone-600"
               }`} />
-              <div className={`absolute right-[-2.5px] top-[4px] w-[1px] h-[3px] transition-colors duration-300 ${
+              <div className={`absolute right-[0.5px] top-[4px] w-[1px] h-[3px] transition-colors duration-300 ${
                 slide === "weather" ? "bg-emerald-500/60" : "bg-stone-400"
               }`} />
               <span className={`absolute inset-0 text-[6px] font-sans flex items-center justify-center font-extrabold scale-[0.8] transition-colors duration-300 ${
@@ -2919,108 +2929,137 @@ function PassengerPhone({
           </div>
         </div>
 
+        {/* INTEGRATED TABS SELECTOR - Scrollable and highly professional */}
+        <div className="z-10 px-2 pb-1 shrink-0">
+          <div className="flex overflow-x-auto whitespace-nowrap gap-1 py-1.5 px-0.5 scrollbar-none scroll-smooth">
+            {SLIDES_SEQUENCE.map((s) => {
+              let label = "";
+              let icon = "";
+              let accentColor = "";
+              if (s === "weather") { label = "Clima"; icon = "☀️"; accentColor = "text-amber-500"; }
+              else if (s === "bus-035") { label = "035"; icon = "🚌"; accentColor = "text-yellow-500"; }
+              else if (s === "bus-034") { label = "034"; icon = "🚌"; accentColor = "text-blue-500"; }
+              else if (s === "bus-466x1") { label = "466X1"; icon = "🚌"; accentColor = "text-purple-500"; }
+              else if (s === "news-g1") { label = "G1"; icon = "📰"; accentColor = "text-red-500"; }
+              else if (s === "news-ge") { label = "GE"; icon = "⚽"; accentColor = "text-emerald-500"; }
+              else if (s === "news-cnn") { label = "CNN"; icon = "📺"; accentColor = "text-red-650"; }
+
+              const isActive = slide === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => handleSetSlide(s)}
+                  className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tight flex items-center gap-1 shrink-0 select-none transition-all duration-150 active:scale-95 border ${
+                    isActive
+                      ? "bg-slate-900 border-slate-950 text-white shadow-md font-bold scale-[1.03]"
+                      : slide === "weather"
+                        ? "bg-emerald-950/80 border-emerald-900/40 text-emerald-350 hover:bg-emerald-900/60"
+                        : "bg-white border-stone-200 text-stone-600 shadow-3xs hover:bg-stone-50"
+                  }`}
+                >
+                  <span className={`${accentColor} text-[10px]`}>{icon}</span>
+                  <span className="font-sans font-extrabold leading-none">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* COMPONENT BODY */}
-        <div className="flex-grow z-10 overflow-y-auto max-h-[395px] scrollbar-none relative min-h-[350px]">
+        <div className="flex-grow z-10 overflow-y-auto max-h-[355px] scrollbar-none relative min-h-[350px]">
           <AnimatePresence mode="wait" initial={false}>
-            {slide === "weather" ? (
+            {slide === "weather" && (
               <motion.div
                 key="weather"
                 initial={{ x: 120, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -120, opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex flex-col justify-between text-center h-full flex-grow py-1"
+                className="flex flex-col justify-between text-center h-full flex-grow py-1 px-3"
               >
-                
                 {/* Header Labeling */}
-                <div className="text-center font-mono animate-fade-in">
+                <div className="text-center font-mono animate-fade-in mt-1">
                   <span className="text-[9px] font-bold tracking-[0.25em] text-emerald-400 uppercase bg-[#061f14] border border-[#10b981]/30 py-0.5 px-3 rounded-full inline-block mb-1 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
                     TEMPO:
                   </span>
                   
                   {/* Big Temperature Display style from Screenshot 1 */}
-                  <div className="relative my-2.5">
-                    <span className="text-6xl font-display font-bold tracking-tighter text-white block drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
+                  <div className="relative my-2">
+                    <span className="text-5xl font-display font-bold tracking-tighter text-white block drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
                       {currTemp}°C
                     </span>
                   </div>
                 </div>
 
                 {/* Central Glowing Weather Icon illustration */}
-                <div className="my-2.5 flex flex-col items-center justify-center relative">
+                <div className="my-1 flex flex-col items-center justify-center relative">
                   <div className="absolute w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
                   
                   {/* Custom stylized high contrast Sun and Cloud Rain SVG bundle resembling Screenshot 1 */}
-                  <div className="relative w-24 h-24 flex items-center justify-center animate-pulse duration-[3000ms]">
+                  <div className="relative w-20 h-20 flex items-center justify-center animate-pulse duration-[3000ms]">
                     {/* Glowing sun behind */}
-                    <div className="absolute -top-1 -right-1 w-12 h-12 bg-gradient-to-br from-yellow-405 to-amber-500 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.65)] border border-yellow-300 opacity-90 animate-spin duration-[15000ms]" />
+                    <div className="absolute -top-1 -right-1 w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.65)] border border-yellow-300 opacity-90 animate-spin duration-[15000ms]" />
                     
                     {/* Intricate cloud */}
-                    <div className="absolute w-16 h-10 bg-gradient-to-b from-stone-100 to-stone-300 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] border border-white/60 z-10 flex items-center justify-center">
+                    <div className="absolute w-14 h-9 bg-gradient-to-b from-stone-100 to-stone-300 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] border border-white/60 z-10 flex items-center justify-center">
                       <span className="w-1.5 h-1.5 rounded-full bg-stone-300 absolute left-3 top-3" />
                     </div>
                     
                     {/* Rain drops falling */}
-                    <div className="absolute bottom-2 left-6 flex gap-2.5 z-20">
-                      <span className="w-[2px] h-3.5 bg-cyan-400 rounded-full transform rotate-12 animate-bounce shadow-sm" />
-                      <span className="w-[2px] h-4 bg-emerald-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.2s] shadow-sm" />
-                      <span className="w-[2px] h-3.5 bg-cyan-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.4s] shadow-sm" />
+                    <div className="absolute bottom-1 left-5 flex gap-2 z-20">
+                      <span className="w-[1.8px] h-3 bg-cyan-400 rounded-full transform rotate-12 animate-bounce shadow-sm" />
+                      <span className="w-[1.8px] h-3.5 bg-emerald-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.2s] shadow-sm" />
+                      <span className="w-[1.8px] h-3 bg-cyan-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.4s] shadow-sm" />
                     </div>
                   </div>
                 </div>
 
                 {/* Weather Category text - matching "NUVENS E CHUVA" */}
-                <div className="mb-2 font-mono text-center">
-                  <h2 className="text-lg font-black tracking-wider text-emerald-400 uppercase drop-shadow">
+                <div className="mb-1 font-mono text-center">
+                  <h2 className="text-md font-black tracking-wider text-emerald-400 uppercase drop-shadow">
                     NUVENS E CHUVA
                   </h2>
-                  <p className="text-[8.5px] text-stone-300 uppercase tracking-widest mt-0.5 mt-1 font-bold">
+                  <p className="text-[8.5px] text-stone-300 uppercase tracking-widest mt-0.5 font-bold">
                     {tvState.temperature.includes("Chuv") || tvState.temperature.includes("chuv") ? "NUBRADO E CHUVOSO" : "NUBRADO PARCIALMENTE"}
                   </p>
                 </div>
 
                 {/* Custom matrix sensor metrics ticker bar from the physical phone mockup */}
-                <div className="bg-[#031c11]/85 border border-emerald-500/20 rounded-xl p-2 mt-2 text-left shadow-md">
-                  <div className="grid grid-cols-2 gap-1.5 text-[8px] font-mono text-stone-300">
-                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1.5">
+                <div className="bg-[#031c11]/85 border border-emerald-500/20 rounded-xl p-2 text-left shadow-md">
+                  <div className="grid grid-cols-2 gap-1 text-[7.5px] font-mono text-stone-300">
+                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1">
                       <span>UMIDADE:</span>
                       <span className="text-emerald-400 font-extrabold">85%</span>
                     </div>
-                    <div className="flex items-center justify-between pl-1.5">
+                    <div className="flex items-center justify-between pl-1">
                       <span>VENTO:</span>
                       <span className="text-emerald-400 font-extrabold">12 KM/H</span>
                     </div>
-                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1.5 pt-1">
+                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1 pt-0.5">
                       <span>SENSACAO:</span>
                       <span className="text-emerald-400 font-extrabold">{sensation}°C</span>
                     </div>
-                    <div className="flex items-center justify-between pl-1.5 pt-1">
+                    <div className="flex items-center justify-between pl-1 pt-0.5">
                       <span>CIDADE:</span>
-                      <span className="text-yellow-450 font-extrabold">OSASCO-SP</span>
+                      <span className="text-yellow-405 font-extrabold">OSASCO-SP</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Bottom Weather Card */}
-                <div className="bg-[#03150d] border border-emerald-500/10 rounded-xl p-2 flex items-start mt-2 gap-1.5 select-none text-[8px]">
-                  <div className="text-blue-300 text-xs shrink-0 pt-0.5">⭐</div>
-                  <div className="flex-grow text-left">
-                    <p className="text-[8px] font-mono text-slate-350 font-bold uppercase tracking-widest leading-none mb-1 shadow-sm">ALERTAS COLETIVOS</p>
-                    <p className="text-[9.5px] text-white leading-normal font-sans font-medium">{tvState.temperature ? tvState.temperature : "Dia nublado com possibilidade de chuva leve"}</p>
-                  </div>
-                  {/* Custom pagination dots inside weather widget */}
-                  <div className="flex gap-[3px] text-[7px] font-bold mt-1 text-slate-500 scale-[0.85] shrink-0 align-middle">
-                    <span className="text-yellow-405">●</span>
-                    <span>◌</span>
-                    <span>◌</span>
-                    <span>◌</span>
+                <div className="bg-[#03150d] border border-emerald-500/10 rounded-xl p-1.5 flex items-start mt-1.5 gap-1 select-none text-[8px]">
+                  <div className="text-blue-300 text-xs shrink-0 select-none">⭐</div>
+                  <div className="flex-grow text-left leading-tight">
+                    <p className="text-[7.5px] font-mono text-slate-300 font-bold uppercase tracking-widest leading-none mb-0.5 shadow-sm">ALERTAS COLETIVOS</p>
+                    <p className="text-[9px] text-white leading-normal font-sans font-medium">{tvState.temperature ? tvState.temperature : "Dia nublado com possibilidade de chuva leve"}</p>
                   </div>
                 </div>
-
               </motion.div>
-            ) : (
+            )}
+
+            {(slide === "bus-035" || slide === "bus-034" || slide === "bus-466x1") && (
               <motion.div
-                key="transit"
+                key={slide}
                 initial={{ x: 120, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -120, opacity: 0 }}
@@ -3028,121 +3067,91 @@ function PassengerPhone({
                 className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
               >
                 {/* BLUE HEADER BAR - EXACT MATCH TO USER COMPONENT PHOTO */}
-                <div className="bg-[#002d62] text-white py-2.5 px-3.5 flex items-center justify-between font-sans select-none shrink-0 border-b border-blue-900 shadow-sm">
-                  {/* Left Close (X) icon */}
-                  <button type="button" className="text-white hover:opacity-80 transition scale-110">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                  
-                  {/* Center Title */}
-                  <span className="text-white text-[11.5px] font-extrabold uppercase tracking-wider">
+                <div className="bg-[#002d62] text-white py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-blue-900 shadow-sm">
+                  <span className="text-white text-[11px] font-extrabold uppercase tracking-wider">
                     Ponto de Parada
                   </span>
-                  
-                  {/* Right Info (i) icon */}
-                  <button type="button" className="text-white hover:opacity-80 transition select-none scale-110 font-black">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                  </button>
+                  <div className="bg-emerald-400 w-1.5 h-1.5 rounded-full animate-pulse mr-1" title="Sinal Conectado" />
                 </div>
 
                 {/* SUB HEADER BAR - NAME AND HEART FAVORITE */}
-                <div className="bg-white border-b border-stone-200 px-4 py-2 flex items-center justify-between font-sans select-none shrink-0 shadow-xs">
+                <div className="bg-white border-b border-stone-200 px-3 py-1.5 flex items-center justify-between font-sans select-none shrink-0 shadow-xs">
                   <div className="text-left leading-none">
-                    <span className="text-[12px] font-black text-stone-900 tracking-tight uppercase">
-                      {activeMonitor?.location || "Terminal Central - LANHOUSE24H"}
+                    <span className="text-[10.5px] font-black text-stone-900 tracking-tight uppercase">
+                      {slide === "bus-035" && "LINHA 035 - CIRCULAR"}
+                      {slide === "bus-034" && "LINHA 034 - COLETIVO"}
+                      {slide === "bus-466x1" && "LINHA 466X1 - EXPRESSO"}
                     </span>
                     <span className="text-[7px] text-stone-400 block mt-0.5 font-bold uppercase tracking-wider font-mono">
-                      CONECTADO AO RETRANSMISSOR
+                      {activeMonitor?.location || "Terminal Central - LANHOUSE24H"}
                     </span>
                   </div>
                   
                   {/* Red favorite heart */}
-                  <button type="button" className="text-rose-500 scale-110 hover:scale-120 transition">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4.5 h-4.5">
+                  <button type="button" className="text-rose-500 scale-100 hover:scale-110 active:scale-90 transition">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                     </svg>
                   </button>
                 </div>
 
-                {/* BUS SINK LIST WITH MODERN ROW DESIGN FROM THE SCREENSHOT */}
-                <div className="flex-grow p-3 flex flex-col gap-2 overflow-y-auto bg-[#f4f6f9] min-h-[310px] uppercase font-mono">
+                {/* BUS SINK LIST WITH MODERN ROW DESIGN */}
+                <div className="flex-grow p-3 flex flex-col gap-2 overflow-y-auto bg-[#f4f6f9] min-h-[300px] uppercase font-mono">
                   {(() => {
-                    const lineGroup = (activeMonitor?.customBusLines || "035/034/466X1").split("/");
-                    const validLines = lineGroup.map((line: string) => line.trim().toUpperCase()).filter(Boolean);
-                    if (validLines.length === 0) {
-                      return (
-                        <div className="text-center py-6 bg-stone-100 rounded-xl border border-dashed border-stone-300 text-[10px] text-stone-500 font-sans select-none">
-                          Nenhum ônibus programado para agora.
-                        </div>
-                      );
+                    const rows: any[] = [];
+                    const lineTime35 = getLineTime("035");
+                    const parsedTime35 = parseInt(lineTime35) || 12;
+
+                    const lineTime34 = getLineTime("034");
+                    const parsedTime34 = parseInt(lineTime34) || 15;
+
+                    const lineTime466 = getLineTime("466X1");
+                    const parsedTime466 = parseInt(lineTime466) || 8;
+
+                    if (slide === "bus-035") {
+                      rows.push({
+                        line: "035",
+                        name: "Circular Centro",
+                        type: "CIRCULAR",
+                        subtitle: "Circular • via Jd. Palmares",
+                        time: `${parsedTime35} MIN`
+                      });
+                    } else if (slide === "bus-034") {
+                      rows.push({
+                        line: "034",
+                        name: "Terminal (Subida)",
+                        type: "SOBE",
+                        subtitle: "SOBE • via Centro h.",
+                        time: `${parsedTime34} MIN`
+                      });
+                      rows.push({
+                        line: "034",
+                        name: "Centro (Descida)",
+                        type: "DESCE",
+                        subtitle: "DESCE • via Jd. Palmares",
+                        time: `${parsedTime34 + 5} MIN`
+                      });
+                    } else if (slide === "bus-466x1") {
+                      rows.push({
+                        line: "466X1",
+                        name: "Terminal (Subida)",
+                        type: "SOBE",
+                        subtitle: "SOBE • via Rodovia Exp",
+                        time: `${parsedTime466} MIN`
+                      });
+                      rows.push({
+                        line: "466X1",
+                        name: "Centro (Descida)",
+                        type: "DESCE",
+                        subtitle: "DESCE • via Rodovia Exp",
+                        time: `${parsedTime466 + 7} MIN`
+                      });
                     }
 
-                    const rows: any[] = [];
-                    validLines.forEach((line) => {
-                      const rawTime = getLineTime(line);
-                      const parsedMins = parseInt(rawTime) || 12;
-
-                      if (line === "035" || line === "35") {
-                        rows.push({
-                          line: "035",
-                          name: "Circular Centro",
-                          type: "CIRCULAR",
-                          subtitle: "Circular • via Jd. Palmares",
-                          time: `${parsedMins} MIN`
-                        });
-                      } else if (line === "034" || line === "34") {
-                        rows.push({
-                          line: "034",
-                          name: "Terminal (Subida)",
-                          type: "SOBE",
-                          subtitle: "SOBE • via Centro h.",
-                          time: `${parsedMins} MIN`
-                        });
-                        rows.push({
-                          line: "034",
-                          name: "Centro (Descida)",
-                          type: "DESCE",
-                          subtitle: "DESCE • via Jd. Palmares",
-                          time: `${parsedMins + 5} MIN`
-                        });
-                      } else if (line === "466X1" || line === "466X" || line === "466") {
-                        rows.push({
-                          line: "466X1",
-                          name: "Terminal (Subida)",
-                          type: "SOBE",
-                          subtitle: "SOBE • via Rodovia Exp",
-                          time: `${parsedMins} MIN`
-                        });
-                        rows.push({
-                          line: "466X1",
-                          name: "Centro (Descida)",
-                          type: "DESCE",
-                          subtitle: "DESCE • via Rodovia Exp",
-                          time: `${parsedMins + 7} MIN`
-                        });
-                      } else {
-                        // Custom lines added arbitrary
-                        rows.push({
-                          line,
-                          name: `Linha ${line}`,
-                          type: "CIRCULAR",
-                          subtitle: "Regular • Duplo Fluxo",
-                          time: `${parsedMins} MIN`
-                        });
-                      }
-                    });
-
-                    return rows.map((row, i) => (
+                    return rows.map((row, idx) => (
                       <div
-                        key={i}
-                        className="bg-white text-stone-900 border border-stone-200/90 rounded-2xl p-3 flex justify-between items-center transition relative shadow-[0_2px_5px_rgba(0,0,0,0.03)] hover:border-stone-300 select-none animate-fade-in"
+                        key={idx}
+                        className="bg-white text-stone-900 border border-stone-200/90 rounded-2xl p-3 flex justify-between items-center transition relative shadow-[0_2px_5px_rgba(0,0,0,0.03)] select-none animate-fade-in"
                       >
                         <div className="flex items-center gap-3">
                           {/* Yellow badge like screenshot */}
@@ -3172,85 +3181,222 @@ function PassengerPhone({
                     ));
                   })()}
                 </div>
+              </motion.div>
+            )}
 
+            {slide === "news-g1" && (
+              <motion.div
+                key="news-g1"
+                initial={{ x: 120, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -120, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
+              >
+                {/* G1 HEADER BAR */}
+                <div className="bg-[#cc0000] text-white py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-red-950 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="bg-white text-[#cc0000] px-1.5 py-0.2 rounded font-black italic text-[11px] tracking-tighter select-none">g1</span>
+                    <span className="text-[9px] font-extrabold tracking-widest text-red-100 uppercase">OSASCO & REGIÃO</span>
+                  </div>
+                  <span className="text-[8px] font-bold bg-red-800 text-white px-1.5 py-0.2 rounded-full animate-pulse">AO VIVO</span>
+                </div>
+
+                {/* G1 ARTICLE CONTENT */}
+                <div className="p-3 overflow-y-auto flex-grow bg-white font-sans max-h-[350px]">
+                  <img 
+                    src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=450&auto=format&fit=crop&q=80" 
+                    alt="Carreta de Milho PRF"
+                    className="w-full h-28 object-cover rounded-xl mb-2 shadow-sm border border-stone-100"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="bg-red-50 text-[#cc0000] border border-red-105 rounded-md px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase inline-block mb-1">
+                    APREENSÃO RECORD
+                  </div>
+                  <h1 className="text-stone-950 font-black text-[12px] leading-tight mb-1 tracking-tight uppercase hover:text-[#cc0000] transition">
+                    PRF APREENDE EM MS CARGA DE MILHO QUE ESCONDIA TONELADAS DE DROGA EM CAMINHÃO PARA SP
+                  </h1>
+                  <p className="text-[9px] text-stone-500 leading-normal font-medium">
+                    Autoridades paulistas confirmam rastreamento estratégico de veículo em rodovia. Motorista foi detido em flagrante.
+                  </p>
+                  <p className="text-[7.5px] text-stone-400 font-bold mt-1.5 font-mono uppercase">
+                    🕒 Há 2 min • Por G1 Osasco
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {slide === "news-ge" && (
+              <motion.div
+                key="news-ge"
+                initial={{ x: 120, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -120, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
+              >
+                {/* GE HEADER BAR */}
+                <div className="bg-[#00c853] text-[#002d62] py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-green-800 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="bg-[#002d62] text-[#00c853] px-1.5 py-0.2 rounded font-black italic text-[11px] tracking-tighter select-none">ge</span>
+                    <span className="text-[9px] font-extrabold tracking-widest text-[#002d62] uppercase">FUTEBOL PAULISTA</span>
+                  </div>
+                  <span className="text-[7.5px] font-black bg-[#002d62] text-white px-2 py-0.2 rounded-full">EXCLUSIVO</span>
+                </div>
+
+                {/* GE ARTICLE CONTENT */}
+                <div className="p-3 overflow-y-auto flex-grow bg-white font-sans max-h-[350px]">
+                  <img 
+                    src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=450&auto=format&fit=crop&q=80" 
+                    alt="Futebol Arena"
+                    className="w-full h-28 object-cover rounded-xl mb-2 shadow-sm border border-stone-100"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-md px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase inline-block mb-1">
+                    BRASILEIRÃO 2026
+                  </div>
+                  <h1 className="text-stone-950 font-black text-[12px] leading-tight mb-1 tracking-tight uppercase hover:text-emerald-700 transition">
+                    ABEL FERREIRA RETORNA COM TITULARES ABSOLUTOS E PROMETE MAIOR PRESSÃO NO ALLIANZ LOTADO
+                  </h1>
+                  <p className="text-[9px] text-stone-500 leading-normal font-medium">
+                    Com mais de 35 mil ingressos vendidos, Allianz Parque promete ser um caldeirão na busca de três pontos capitais na rodada.
+                  </p>
+                  <p className="text-[7.5px] text-stone-400 font-bold mt-1.5 font-mono uppercase">
+                    🕒 Há 15 min • Por GE São Paulo
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {slide === "news-cnn" && (
+              <motion.div
+                key="news-cnn"
+                initial={{ x: 120, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -120, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
+              >
+                {/* CNN HEADER BAR */}
+                <div className="bg-[#cc0000] text-white py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-stone-800 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="bg-white text-black px-1.5 py-0.2 font-extrabold text-[10px] tracking-tighter select-none">CNN</span>
+                    <span className="text-[9px] font-black tracking-widest text-white uppercase italic">BRASIL</span>
+                  </div>
+                  <span className="text-[8px] font-extrabold bg-stone-900 border border-red-500 px-1.5 py-0.2 text-red-500 rounded">BREAKING</span>
+                </div>
+
+                {/* CNN ARTICLE CONTENT */}
+                <div className="p-3 overflow-y-auto flex-grow bg-white font-sans max-h-[350px]">
+                  <img 
+                    src="https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=450&auto=format&fit=crop&q=80" 
+                    alt="Chuva Grande Sao Paulo"
+                    className="w-full h-28 object-cover rounded-xl mb-2 shadow-sm border border-stone-100"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="bg-red-50 text-red-700 border border-red-100 rounded-md px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase inline-block mb-1">
+                    CATASTROFE AMBIENTAL
+                  </div>
+                  <h1 className="text-stone-950 font-black text-[12px] leading-tight mb-1 tracking-tight uppercase hover:text-red-650 transition">
+                    FRENTE FRIA AVANÇA COM VENTANIA E TEMPERATURA SOFRE QUEDA HISTÓRICA DE ATÉ 12 GRAUS EM SP
+                  </h1>
+                  <p className="text-[9px] text-stone-500 leading-normal font-medium">
+                    Defesa Civil emite estado de atenção para pancadas de chuva severas acompanhadas de descargas elétricas no cinturão metropolitano.
+                  </p>
+                  <p className="text-[7.5px] text-stone-400 font-bold mt-1.5 font-mono uppercase">
+                    🕒 Atualizado Agora • CNN Meteorologia
+                  </p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {/* DYNAMIC SWIPE NAVIGATION PININDICATOR */}
-          <div className="mt-3.5 py-2 bg-black/55 rounded-xl flex flex-col items-center gap-1.5 border border-white/5 relative overflow-hidden shadow-inner">
-            {/* Tiny progress banner at the bottomrepresenting automatic progress */}
-            {isAutoplay && (
-              <div 
-                className="absolute bottom-0 left-0 h-[2px] bg-emerald-400/80 transition-all duration-[100ms] ease-linear" 
-                style={{ width: `${progress}%` }}
+        <div className="mt-2 py-1.5 bg-black/60 rounded-xl flex flex-col items-center gap-1 border border-white/5 relative overflow-hidden shadow-inner shrink-0">
+          {/* Tiny progress banner representing automatic progress */}
+          {isAutoplay && (
+            <div 
+              className="absolute bottom-0 left-0 h-[2px] bg-emerald-400/80 transition-all duration-[100ms] ease-linear" 
+              style={{ width: `${progress}%` }}
+            />
+          )}
+          
+          <div className="flex justify-center items-center gap-2">
+            {SLIDES_SEQUENCE.map((s) => (
+              <button 
+                key={s}
+                onClick={() => handleSetSlide(s)}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${slide === s ? "bg-yellow-405 scale-125 shadow-[0_0_6px_rgba(234,179,8,0.5)]" : "bg-white/40 hover:bg-white/70"}`}
+                title={s}
               />
-            )}
+            ))}
             
-            <div className="flex justify-center items-center gap-3.5">
-              <button 
-                onClick={() => handleSetSlide("weather")}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${slide === "weather" ? "bg-yellow-400 scale-125 shadow-[0_0_8px_rgba(234,179,8,0.5)]" : "bg-white/40 hover:bg-white/70"}`}
-                title="Clima"
-              />
-              
-              {/* Play/Pause icon indicator to play/pause interval timer */}
-              <button 
-                onClick={() => setIsAutoplay(!isAutoplay)}
-                className="text-[8px] text-stone-400 hover:text-white transition px-1.5 py-0.5 rounded bg-white/5 border border-white/10 active:scale-95 flex items-center justify-center scale-90"
-                title={isAutoplay ? "Pausar Alternância Automática" : "Iniciar Alternância Automática"}
-              >
-                {isAutoplay ? "⏸️" : "▶️"}
-              </button>
-
-              <button 
-                onClick={() => handleSetSlide("transit")}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${slide === "transit" ? "bg-yellow-400 scale-125 shadow-[0_0_8px_rgba(234,179,8,0.5)]" : "bg-white/40 hover:bg-white/70"}`}
-                title="Transporte"
-              />
-            </div>
-            <div className="flex items-center gap-1.5 scale-90">
-              <span className="text-[7px] font-mono font-bold uppercase tracking-widest text-slate-300 leading-none">
-                {slide === "weather" ? "Visual Clima" : "Horários de Ônibus"}
-              </span>
-              <span className={`text-[6px] px-1 py-0.2 rounded font-mono font-bold uppercase tracking-wider ${isAutoplay ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20' : 'bg-stone-800 text-stone-400'}`}>
-                {isAutoplay ? "Auto-Play" : "Manual"}
-              </span>
-            </div>
+            {/* Play/Pause icon to toggle autoplay */}
+            <button 
+              onClick={() => setIsAutoplay(!isAutoplay)}
+              className="text-[8px] text-stone-400 hover:text-white transition ml-1 px-1 py-0.2 rounded bg-white/5 border border-white/10 active:scale-95 scale-[0.8] flex items-center justify-center"
+              title={isAutoplay ? "Pausar" : "Iniciar"}
+            >
+              {isAutoplay ? "⏸️" : "▶️"}
+            </button>
           </div>
 
-        </div>
-
-        {/* METRO STANDARD TOUCH KEYS AT VERY BOTTOM */}
-        <div className="h-7 bg-stone-950/95 border-t border-white/5 flex items-center justify-around z-10 select-none">
-          {/* Back key */}
-          <button 
-            onClick={() => handleSetSlide(slide === "transit" ? "weather" : "transit")} 
-            className="text-stone-500 hover:text-stone-300 active:scale-95 transition"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-stone-500 rotate-180">
-              <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          {/* Home circle key */}
-          <button 
-            onClick={() => handleSetSlide("weather")} 
-            className="w-3.5 h-3.5 border border-stone-500 hover:border-stone-300 rounded-full flex items-center justify-center transition active:scale-90"
-          >
-            <div className="w-1.5 h-1.5 bg-stone-600 rounded-full" />
-          </button>
-          {/* Recents key ||| */}
-          <button 
-            onClick={() => handleSetSlide(slide === "weather" ? "transit" : "weather")} 
-            className="flex gap-[2.5px] hover:opacity-80 transition active:scale-95"
-          >
-            <div className="w-[1.8px] h-3.5 bg-stone-500 rounded-sm" />
-            <div className="w-[1.8px] h-3.5 bg-stone-500 rounded-sm" />
-            <div className="w-[1.8px] h-3.5 bg-stone-500 rounded-sm" />
-          </button>
+          <div className="flex items-center gap-1 scale-[0.85]">
+            <span className="text-[7px] font-mono font-bold uppercase tracking-widest text-slate-300 leading-none">
+              {slide === "weather" && "Tempo Ativo"}
+              {slide === "bus-035" && "Ônibus Circular 035"}
+              {slide === "bus-034" && "Terminal/Centro 034"}
+              {slide === "bus-466x1" && "Terminal/Centro 466X1"}
+              {slide === "news-g1" && "Notícias • g1 Osasco"}
+              {slide === "news-ge" && "Esportes • ge Paulista"}
+              {slide === "news-cnn" && "Ao Vivo • CNN Brasil"}
+            </span>
+            <span className={`text-[6px] px-1 py-0.1 rounded font-mono font-bold uppercase tracking-wider ${isAutoplay ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/10' : 'bg-stone-800 text-stone-400'}`}>
+              {isAutoplay ? "Auto-Play" : "Manual"}
+            </span>
+          </div>
         </div>
 
       </div>
-    );
+
+      {/* METRO STANDARD TOUCH KEYS AT VERY BOTTOM */}
+      <div className="h-7 bg-stone-950/95 border-t border-white/5 flex items-center justify-around z-10 select-none rounded-b-[2.4rem] overflow-hidden">
+        {/* Back key */}
+        <button 
+          onClick={() => {
+            const currentIndex = SLIDES_SEQUENCE.indexOf(slide);
+            const prevIndex = (currentIndex - 1 + SLIDES_SEQUENCE.length) % SLIDES_SEQUENCE.length;
+            handleSetSlide(SLIDES_SEQUENCE[prevIndex]);
+          }} 
+          className="text-stone-500 hover:text-stone-300 active:scale-95 transition"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-stone-500 rotate-180">
+            <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {/* Home circle key */}
+        <button 
+          onClick={() => handleSetSlide("weather")} 
+          className="w-3.5 h-3.5 border border-stone-500 hover:border-stone-300 rounded-full flex items-center justify-center transition active:scale-90"
+        >
+          <div className="w-1.5 h-1.5 bg-stone-600 rounded-full" />
+        </button>
+        {/* Recents key ||| */}
+        <button 
+          onClick={() => {
+            const currentIndex = SLIDES_SEQUENCE.indexOf(slide);
+            const nextIndex = (currentIndex + 1) % SLIDES_SEQUENCE.length;
+            handleSetSlide(SLIDES_SEQUENCE[nextIndex]);
+          }} 
+          className="flex gap-[2.5px] hover:opacity-80 transition active:scale-95"
+        >
+          <div className="w-[1.8px] h-3.5 bg-stone-500 rounded-sm" />
+          <div className="w-[1.8px] h-3.5 bg-stone-500 rounded-sm" />
+          <div className="w-[1.8px] h-3.5 bg-stone-500 rounded-sm" />
+        </button>
+      </div>
+
+    </div>
+  );
 }
