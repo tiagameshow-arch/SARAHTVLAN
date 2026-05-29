@@ -1492,20 +1492,43 @@ export default function App() {
   // Standalone modes switcher
   if (urlMode === "tv") {
     const targetMonitorId = urlMonitorId || "terminal-principal";
-    // If an explicit monitor is requested via URL, we wait for it to be found/registered
-    // instead of immediately falling back to the primary monitor while loading.
+    
+    // Solid local fallback monitor object matching default primary monitor
+    const fallbackMonitor = {
+      id: "terminal-principal",
+      name: "Monitor Principal - LANHOUSE24H",
+      location: "Terminal Central - LANHOUSE24H",
+      customBusLines: "035/034/466X1",
+      playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
+      currentVideoIndex: 0,
+      isPlaying: true,
+      mute: true,
+      orientation: "landscape"
+    } as any;
+
     let monitorObj = tvState.monitors.find(m => m.id === targetMonitorId);
     if (!monitorObj && !urlMonitorId) {
       monitorObj = tvState.monitors[0];
     }
     
+    // Automatically use the fallback monitor configuration if no monitor is available
+    // to shield the physical screen from blank state, errors or loading screen timeouts!
     if (!monitorObj) {
-      return (
-        <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center text-stone-400 p-4 font-mono select-none">
-          <Tv className="w-12 h-12 text-emerald-500 animate-spin mb-3" />
-          <p>Conectando ao retransmissor central de sinal físico...</p>
-        </div>
-      );
+      if (targetMonitorId === "terminal-principal") {
+        monitorObj = fallbackMonitor;
+      } else {
+        monitorObj = {
+          id: targetMonitorId,
+          name: `Monitor ${targetMonitorId.toUpperCase()}`,
+          location: "Avenida Zumbi dos Palmares",
+          customBusLines: "035/034/466X1",
+          playlist: ["ysz5S6PUM-U"],
+          currentVideoIndex: 0,
+          isPlaying: true,
+          mute: true,
+          orientation: "landscape"
+        } as any;
+      }
     }
 
     const currentVidId = monitorObj.playlist[monitorObj.currentVideoIndex] || "ysz5S6PUM-U";
@@ -2846,30 +2869,52 @@ function PassengerPhone({
         style={{ 
           background: slide === "weather" 
             ? "linear-gradient(to bottom, #032517, #010f09)" 
-            : "linear-gradient(to bottom, #05131a, #010609)"
+            : "#f4f6f9"
         }}
       >
         {/* Futuristic circuit overlay for cyber styling */}
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none z-0" />
+        {slide === "weather" && (
+          <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none z-0" />
+        )}
         
         {/* Glow corner highlights */}
-        <div className="absolute -top-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+        {slide === "weather" && (
+          <>
+            <div className="absolute -top-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+          </>
+        )}
 
         {/* Dynamic header of the phone */}
-        <div className="pt-4 px-4 z-10 flex justify-between items-center text-[9px] font-mono font-bold text-emerald-400 mb-2 drop-shadow-md">
-          <span className="tracking-widest bg-emerald-950/80 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[8.5px]">SINAL OK</span>
+        <div className={`pt-4 px-4 z-10 flex justify-between items-center text-[9px] font-mono font-bold mb-2 transition-colors duration-300 ${
+          slide === "weather" ? "text-emerald-400 drop-shadow-md" : "text-stone-700"
+        }`}>
+          <span className={`tracking-widest border px-1.5 py-0.5 rounded text-[8.5px] transition-colors duration-300 ${
+            slide === "weather" ? "bg-emerald-950/80 border-emerald-500/20 text-emerald-400" : "bg-stone-200 border-stone-300 text-stone-700"
+          }`}>SINAL OK</span>
           <div className="flex items-center gap-1.5">
             {/* Wifi Inline Icon */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-emerald-400 inline-block">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`w-3.5 h-3.5 inline-block transition-colors duration-300 ${
+              slide === "weather" ? "text-emerald-400" : "text-stone-500"
+            }`}>
               <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-[7.5px] tracking-tighter bg-emerald-950 border border-emerald-500/25 text-emerald-400 font-extrabold rounded px-1 scale-90">5G_STABLE</span>
+            <span className={`text-[7.5px] tracking-tighter border font-extrabold rounded px-1 scale-90 transition-colors duration-300 ${
+              slide === "weather" ? "bg-emerald-950 border-emerald-500/25 text-emerald-400" : "bg-stone-250 border-stone-300 text-stone-705"
+            }`}>5G_STABLE</span>
             {/* Battery Indicator with 94% */}
-            <div className="h-3 w-[22px] border border-emerald-500/40 rounded-xs flex items-center p-0.5 relative gap-[1.5px]">
-              <div className="bg-emerald-400 h-full w-[94%] rounded-3xs" />
-              <div className="absolute right-[-2.5px] top-[4px] w-[1px] h-[3px] bg-emerald-500/60" />
-              <span className="absolute inset-0 text-[6px] font-sans flex items-center justify-center font-extrabold text-white scale-[0.8]">94</span>
+            <div className={`h-3 w-[22px] border rounded-xs flex items-center p-0.5 relative gap-[1.5px] transition-colors duration-300 ${
+              slide === "weather" ? "border-emerald-500/40" : "border-stone-400"
+            }`}>
+              <div className={`h-full w-[94%] rounded-3xs transition-colors duration-300 ${
+                slide === "weather" ? "bg-emerald-400" : "bg-stone-600"
+              }`} />
+              <div className={`absolute right-[-2.5px] top-[4px] w-[1px] h-[3px] transition-colors duration-300 ${
+                slide === "weather" ? "bg-emerald-500/60" : "bg-stone-400"
+              }`} />
+              <span className={`absolute inset-0 text-[6px] font-sans flex items-center justify-center font-extrabold scale-[0.8] transition-colors duration-300 ${
+                slide === "weather" ? "text-white" : "text-stone-800"
+              }`}>94</span>
             </div>
           </div>
         </div>
@@ -2980,64 +3025,152 @@ function PassengerPhone({
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -120, opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex flex-col gap-3.5 text-left pt-1 flex-grow"
+                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
               >
-                
-                <div className="border-b border-stone-800 pb-2">
-                  <h3 className="text-white text-xs font-display font-medium tracking-wide">CIRCULAÇÃO DE DUPLO FLUXO</h3>
-                  <p className="text-[9px] text-emerald-400 mt-1 uppercase tracking-wider font-extrabold flex items-center gap-1">
-                    📍 Ponto: <span className="text-white font-black">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
-                  </p>
-                  <div className="w-12 h-0.5 bg-yellow-400 mt-1.5" />
+                {/* BLUE HEADER BAR - EXACT MATCH TO USER COMPONENT PHOTO */}
+                <div className="bg-[#002d62] text-white py-2.5 px-3.5 flex items-center justify-between font-sans select-none shrink-0 border-b border-blue-900 shadow-sm">
+                  {/* Left Close (X) icon */}
+                  <button type="button" className="text-white hover:opacity-80 transition scale-110">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                  
+                  {/* Center Title */}
+                  <span className="text-white text-[11.5px] font-extrabold uppercase tracking-wider">
+                    Ponto de Parada
+                  </span>
+                  
+                  {/* Right Info (i) icon */}
+                  <button type="button" className="text-white hover:opacity-80 transition select-none scale-110 font-black">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  </button>
                 </div>
 
-                {/* NEXT BUSES QUEUE */}
-                <div className="flex flex-col gap-2">
-                  <span className="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest pl-0.5 mb-0.5 flex items-center gap-1">
-                    <Bus className="w-3 h-3 text-yellow-400 shrink-0" /> PAINEL SINALIZADOR
-                  </span>
+                {/* SUB HEADER BAR - NAME AND HEART FAVORITE */}
+                <div className="bg-white border-b border-stone-200 px-4 py-2 flex items-center justify-between font-sans select-none shrink-0 shadow-xs">
+                  <div className="text-left leading-none">
+                    <span className="text-[12px] font-black text-stone-900 tracking-tight uppercase">
+                      {activeMonitor?.location || "Terminal Central - LANHOUSE24H"}
+                    </span>
+                    <span className="text-[7px] text-stone-400 block mt-0.5 font-bold uppercase tracking-wider font-mono">
+                      CONECTADO AO RETRANSMISSOR
+                    </span>
+                  </div>
+                  
+                  {/* Red favorite heart */}
+                  <button type="button" className="text-rose-500 scale-110 hover:scale-120 transition">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4.5 h-4.5">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                  </button>
+                </div>
 
+                {/* BUS SINK LIST WITH MODERN ROW DESIGN FROM THE SCREENSHOT */}
+                <div className="flex-grow p-3 flex flex-col gap-2 overflow-y-auto bg-[#f4f6f9] min-h-[310px] uppercase font-mono">
                   {(() => {
                     const lineGroup = (activeMonitor?.customBusLines || "035/034/466X1").split("/");
-                    const validLines = lineGroup.filter((line: string) => line.trim());
+                    const validLines = lineGroup.map((line: string) => line.trim().toUpperCase()).filter(Boolean);
                     if (validLines.length === 0) {
                       return (
-                        <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-dashed border-slate-800 text-[10px] text-slate-550 select-none">
+                        <div className="text-center py-6 bg-stone-100 rounded-xl border border-dashed border-stone-300 text-[10px] text-stone-500 font-sans select-none">
                           Nenhum ônibus programado para agora.
                         </div>
                       );
                     }
-                    return validLines.map((line: string, i: number) => {
-                      const cleanLine = line.trim();
-                      const time = getLineTime(cleanLine);
-                      return (
-                        <div
-                          key={i}
-                          className="bg-slate-900/90 border border-slate-850 px-3 py-2.5 rounded-xl flex justify-between items-center shadow-sm hover:border-slate-800 transition"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="bg-yellow-405 text-stone-950 font-mono text-[10px] px-2 py-0.5 rounded-md font-black leading-none animate-pulse">
-                              {cleanLine}
-                            </span>
-                            <span className="text-[10px] text-white font-extrabold tracking-wide uppercase">CIRCULAR</span>
+
+                    const rows: any[] = [];
+                    validLines.forEach((line) => {
+                      const rawTime = getLineTime(line);
+                      const parsedMins = parseInt(rawTime) || 12;
+
+                      if (line === "035" || line === "35") {
+                        rows.push({
+                          line: "035",
+                          name: "Circular Centro",
+                          type: "CIRCULAR",
+                          subtitle: "Circular • via Jd. Palmares",
+                          time: `${parsedMins} MIN`
+                        });
+                      } else if (line === "034" || line === "34") {
+                        rows.push({
+                          line: "034",
+                          name: "Terminal (Subida)",
+                          type: "SOBE",
+                          subtitle: "SOBE • via Centro h.",
+                          time: `${parsedMins} MIN`
+                        });
+                        rows.push({
+                          line: "034",
+                          name: "Centro (Descida)",
+                          type: "DESCE",
+                          subtitle: "DESCE • via Jd. Palmares",
+                          time: `${parsedMins + 5} MIN`
+                        });
+                      } else if (line === "466X1" || line === "466X" || line === "466") {
+                        rows.push({
+                          line: "466X1",
+                          name: "Terminal (Subida)",
+                          type: "SOBE",
+                          subtitle: "SOBE • via Rodovia Exp",
+                          time: `${parsedMins} MIN`
+                        });
+                        rows.push({
+                          line: "466X1",
+                          name: "Centro (Descida)",
+                          type: "DESCE",
+                          subtitle: "DESCE • via Rodovia Exp",
+                          time: `${parsedMins + 7} MIN`
+                        });
+                      } else {
+                        // Custom lines added arbitrary
+                        rows.push({
+                          line,
+                          name: `Linha ${line}`,
+                          type: "CIRCULAR",
+                          subtitle: "Regular • Duplo Fluxo",
+                          time: `${parsedMins} MIN`
+                        });
+                      }
+                    });
+
+                    return rows.map((row, i) => (
+                      <div
+                        key={i}
+                        className="bg-white text-stone-900 border border-stone-200/90 rounded-2xl p-3 flex justify-between items-center transition relative shadow-[0_2px_5px_rgba(0,0,0,0.03)] hover:border-stone-300 select-none animate-fade-in"
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Yellow badge like screenshot */}
+                          <div className="bg-[#fbc02d] text-stone-950 font-sans font-black text-[12px] px-2.5 py-1.5 rounded-xl min-w-[50px] text-center shadow-xs select-none">
+                            {row.line}
                           </div>
-                          <div className="flex items-center gap-1 text-emerald-450 bg-emerald-950/40 border border-[#10b981]/30 px-2 py-0.5 rounded-lg text-[10px] font-black font-mono shadow-sm">
-                            <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                            <span>{time}</span>
+                          
+                          {/* Text labels */}
+                          <div className="text-left font-sans leading-none">
+                            <h4 className="font-extrabold text-[11px] text-stone-900 tracking-tight leading-none uppercase">
+                              {row.name}
+                            </h4>
+                            <span className="text-[8px] font-bold text-stone-400 mt-1 block leading-none tracking-tight">
+                              {row.subtitle}
+                            </span>
                           </div>
                         </div>
-                      );
-                    });
-                  })()}
-                </div>
 
-                {/* NEWS AND ALERTS */}
-                <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-850 p-3 rounded-xl flex gap-2.5 items-start shadow-sm mt-1">
-                  <span className="text-sm shrink-0">📢</span>
-                  <div className="flex-grow">
-                    <p className="text-[8.5px] font-mono text-slate-400 uppercase tracking-widest leading-none mb-1.5 font-bold">Informativo no Ônibus (Notícias)</p>
-                    <p className="text-xs text-slate-200 leading-normal line-clamp-3 font-sans font-semibold">{tvState.newsTicker}</p>
-                  </div>
+                        {/* Count timer with green pulse indicator */}
+                        <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1.5 rounded-xl">
+                          <span className="text-[10px] font-black font-mono text-stone-950 leading-none">
+                            {row.time}
+                          </span>
+                          <span className="text-emerald-500 text-[8px] leading-none animate-pulse">▼</span>
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
 
               </motion.div>
