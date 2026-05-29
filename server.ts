@@ -78,8 +78,8 @@ function loadStateFromDisk(): TVState {
     monitors: [
       {
         id: "terminal-principal",
-        name: "Monitor Principal - Terminal",
-        location: "Terminal Central",
+        name: "Monitor Principal - LANHOUSE24H",
+        location: "Terminal Central - LANHOUSE24H",
         customBusLines: "035/034/466X1",
         playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
         currentVideoIndex: 0,
@@ -421,38 +421,42 @@ async function startServer() {
     let changed = false;
 
     if (existingIndex === -1) {
-      // ONLY auto-register default pre-configured IDs or other physical monitors if not custom.
-      // To prevent zombie resurrect chains, do NOT auto-register arbitrary "monitor-" IDs on ping. 
-      // They must be explicitly created via "+ Cadastrar Novo Monitor" inside the phone remote controller!
-      if (id.startsWith("monitor-")) {
-        return res.json({ success: false, error: "Monitor does not exist and cannot be auto-registered on ping", state: tvState });
-      }
-
-      // Create pre-configured monitor (e.g. terminal-principal)
+      // Create pre-configured monitor or dynamic monitor instantly on-the-fly (CRIO SOZINHO!)
       const presetsPool = ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E", "_eH8u94IkyY"];
       const shuffled = [...presetsPool].sort(() => 0.5 - Math.random());
       const initialPlaylist = shuffled.slice(0, 2);
 
+      const resolvedName = id === "terminal-principal" 
+        ? "Monitor Principal - LANHOUSE24H" 
+        : (name || `Monitor ${id.toUpperCase()}`);
+
+      const resolvedLocation = id === "terminal-principal"
+        ? "Terminal Central - LANHOUSE24H"
+        : "Avenida Zumbi dos Palmares";
+
       const newMonitor = {
         id,
-        name: name || `Monitor ${id.toUpperCase()}`,
-        location: id === "terminal-principal" ? "Terminal Central" : "Avenida Zumbi dos Palmares",
+        name: resolvedName,
+        location: resolvedLocation,
         customBusLines: "035/034/466X1",
         playlist: initialPlaylist,
         currentVideoIndex: 0,
         isPlaying: true,
         mute: true,
         orientation: orientation || "landscape",
-        ip: clientIp
+        ip: clientIp,
+        isOnline: true
       };
 
       tvState.monitors.push(newMonitor);
       changed = true;
-      console.log(`[Presence] Novo monitor registrado dinamicamente por ping (${clientIp}): ${id}`);
+      console.log(`[Presence] Novo monitor registrado dinamicamente por ping (${clientIp}): ${id} (Nome: ${resolvedName})`);
     } else {
       // Sync parameters safely - DO NOT override orientation or playlist of the server using client-side pings!
       // Server-side / remote control is the source of truth for orientation and playlist!
       const monitor = tvState.monitors[existingIndex];
+      
+      // Update IP and online status if it changed
       if (monitor.ip !== clientIp) {
         monitor.ip = clientIp;
         changed = true;
@@ -507,33 +511,41 @@ async function startServer() {
     updateBusTimes();
   }, 1000);
 
-  // Connection manager: Safe tracking of monitor online status without deleting screens or wiping playlists!
+  // Connection manager: Safe tracking of monitor online status and automatic 5-minute timeout deletion (apaga sozinho)
   const presenceInterval = setInterval(() => {
-    const cutoff = Date.now() - 15000; // 15 seconds cutoff
+    const now = Date.now();
+    const cutoffOnline = now - 15000; // 15 seconds online state cutoff
+    const cutoffDelete = now - 300000; // 5 minutes inactivity cutoff (desaparece para manutenção!)
     let changed = false;
 
-    tvState.monitors = tvState.monitors.map(m => {
-      // The terminal principal is always online for simulation standby, others depend on heartbeat ping
-      if (m.id === "terminal-principal") {
-        if (m.isOnline !== true) {
-          changed = true;
-          return { ...m, isOnline: true };
-        }
-        return m;
+    const remainingMonitors: any[] = [];
+
+    tvState.monitors.forEach(m => {
+      const lastActive = monitorActivity[m.id];
+      
+      // If we don't have activity recorded yet, assume it was just added in this session and keep it
+      if (lastActive !== undefined && lastActive < cutoffDelete) {
+        changed = true;
+        console.log(`[Presence] Monitor ${m.id} (${m.name}) sem sinal há mais de 5 minutos, apagando de forma automática para manutenção.`);
+        return; // Filter out/delete this monitor automatically
       }
 
-      const lastActive = monitorActivity[m.id];
-      const isActuallyOnline = lastActive ? lastActive >= cutoff : false;
+      // Check online status
+      // We also track terminal-principal online state based on pings for strict alignment, but allow safe defaults if just opened
+      const isActuallyOnline = lastActive ? lastActive >= cutoffOnline : true;
 
       if (m.isOnline !== isActuallyOnline) {
         changed = true;
-        return { ...m, isOnline: isActuallyOnline };
+        remainingMonitors.push({ ...m, isOnline: isActuallyOnline });
+      } else {
+        remainingMonitors.push(m);
       }
-      return m;
     });
 
     if (changed) {
+      tvState.monitors = remainingMonitors;
       tvState.updatedAt = new Date().toISOString();
+      saveStateToDisk(tvState);
       broadcastState();
     }
   }, 4000);

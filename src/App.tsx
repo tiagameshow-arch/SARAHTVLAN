@@ -724,9 +724,9 @@ export default function App() {
       }
     } else {
       // Keep core terminal monitor always catalogued so preview state has a safe standby option
-      sendPing("terminal-principal", "Monitor Principal - Terminal");
+      sendPing("terminal-principal", "Monitor Principal - LANHOUSE24H");
       intervalId = setInterval(() => {
-        sendPing("terminal-principal", "Monitor Principal - Terminal");
+        sendPing("terminal-principal", "Monitor Principal - LANHOUSE24H");
       }, 3000);
     }
 
@@ -2600,16 +2600,50 @@ export default function App() {
               </div>
 
               <div>
-                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
-                  🚌 Linhas de Ônibus (separadas por "/")
+                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block mb-1.5">
+                  🚌 Acesso às Linhas (Ativar/Desativar)
                 </label>
-                <input
-                  type="text"
-                  value={customBusLinesValue}
-                  onChange={(e) => setCustomBusLinesValue(e.target.value)}
-                  placeholder="Ex: 035/034/466X1"
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
-                />
+                <div className="grid grid-cols-3 gap-1.5 mb-1">
+                  {["035", "034", "466X1"].map((lineNum) => {
+                    const linesArray = customBusLinesValue
+                      .split("/")
+                      .map(l => l.trim().toUpperCase())
+                      .filter(Boolean);
+                    const isEnabled = linesArray.includes(lineNum);
+
+                    const handleToggle = () => {
+                      let nextLines: string[];
+                      if (isEnabled) {
+                        nextLines = linesArray.filter(l => l !== lineNum);
+                      } else {
+                        nextLines = [...linesArray, lineNum];
+                      }
+                      const orderedLines = ["035", "034", "466X1"].filter(l => nextLines.includes(l));
+                      const newValue = orderedLines.join("/");
+                      setCustomBusLinesValue(newValue);
+                    };
+
+                    return (
+                      <button
+                        key={lineNum}
+                        type="button"
+                        onClick={handleToggle}
+                        className={`py-2 px-1 rounded-xl text-[9px] font-black uppercase transition-all duration-150 border text-center ${
+                          isEnabled
+                            ? "bg-emerald-950/80 text-emerald-450 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
+                            : "bg-stone-900/50 text-stone-550 border-stone-850/60"
+                        }`}
+                      >
+                        <span className="block text-[11px] font-mono leading-none mb-1">{lineNum}</span>
+                        <span className={`text-[6px] font-bold px-1 py-0.2 rounded-sm ${
+                          isEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-stone-950 text-stone-500"
+                        }`}>
+                          {isEnabled ? "HABILITADO" : "DESATIVADO"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <button
