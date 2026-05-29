@@ -149,13 +149,15 @@ const newsPresets = [
   "SANTOS: Peixe foca na Vila Belmiro para o próximo duelo do torneio nacional."
 ];
 
-// Helper to convert time to America/Sao_Paulo timezone
+// Helper to convert time to America/Sao_Paulo timezone safely and robustly without relying on local system tz parsing
 function getOsascoTime() {
-  const dateStr = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
-  const localDate = new Date(dateStr);
-  const hour = localDate.getHours();
-  const minute = localDate.getMinutes();
-  const dayOfWeek = localDate.getDay(); // 0 = Sunday, 1-5 = Weekday, 6 = Saturday
+  const now = new Date();
+  // Brazil America/Sao_Paulo is permanently UTC-3
+  const osascoTimeInMs = now.getTime() - (3 * 3600000);
+  const localDate = new Date(osascoTimeInMs);
+  const hour = localDate.getUTCHours();
+  const minute = localDate.getUTCMinutes();
+  const dayOfWeek = localDate.getUTCDay(); // 0 = Sunday, 1-5 = Weekday, 6 = Saturday
   return { hour, minute, dayOfWeek };
 }
 
@@ -164,68 +166,93 @@ function parseTimeToMinutes(timeStr: string): number {
   return h * 60 + m;
 }
 
-function getNextBusTime(lineKey: string): string {
+function getNextBusArrival(lineKey: string, offsetMinutes: number): string {
   const scheduleDef = BUS_SCHEDULES[lineKey];
   if (!scheduleDef) return "SEM INFO";
   
   const { hour, minute, dayOfWeek } = getOsascoTime();
   const osascoMinutesNow = hour * 60 + minute;
   
-  let schedule: string[] = [];
-  if (dayOfWeek === 0) {
-    schedule = scheduleDef.sunday;
-  } else if (dayOfWeek === 6) {
-    schedule = scheduleDef.saturday;
-  } else {
-    schedule = scheduleDef.weekday;
+  const getScheduleForDay = (day: number) => {
+    if (day === 0) return scheduleDef.sunday;
+    if (day === 6) return scheduleDef.saturday;
+    return scheduleDef.weekday;
+  };
+  
+  const todaySchedule = getScheduleForDay(dayOfWeek);
+  
+  // Find all upcoming arrivals at Rua Zumbi dos Palmares for today
+  const todayArrivals = todaySchedule
+    .map(timeStr => {
+      const depMins = parseTimeToMinutes(timeStr);
+      const arrMins = depMins + offsetMinutes;
+      return { timeStr, depMins, arrMins, dayOffset: 0 };
+    })
+    .filter(item => item.arrMins >= osascoMinutesNow)
+    .sort((a, b) => a.arrMins - b.arrMins);
+    
+  let target = todayArrivals[0];
+  
+  if (!target) {
+    // Wrap around to tomorrow's schedule
+    const tomorrowDayOfWeek = (dayOfWeek + 1) % 7;
+    const tomorrowSchedule = getScheduleForDay(tomorrowDayOfWeek);
+    if (tomorrowSchedule.length > 0) {
+      const firstDepMins = parseTimeToMinutes(tomorrowSchedule[0]);
+      const firstArrMins = firstDepMins + offsetMinutes;
+      target = {
+        timeStr: tomorrowSchedule[0],
+        depMins: firstDepMins,
+        arrMins: 1440 + firstArrMins,
+        dayOffset: 1440
+      };
+    }
   }
   
-  if (schedule.length === 0) {
+  if (!target) {
+    return "SEM MAIS VIAGENS";
+  }
+  
+  const diff = target.arrMins - osascoMinutesNow;
+  
+  // Determine if it operates today/tomorrow
+  const activeSchedule = todaySchedule.length > 0 ? todaySchedule : getScheduleForDay((dayOfWeek + 1) % 7);
+  if (activeSchedule.length === 0) {
     return "NÃO OPERA HOJE";
   }
   
-  // Find trips today
-  const upcoming = schedule
-    .map(timeStr => ({ timeStr, mins: parseTimeToMinutes(timeStr) }))
-    .filter(item => item.mins >= osascoMinutesNow)
-    .sort((a, b) => a.mins - b.mins);
+  if (diff <= 1) {
+    return "PARTIU";
+  }
+  
+  // If wait is very high (greater than 60 minutes), show the exact hour of arrival to keep it clean
+  if (diff > 60) {
+    const arrivalMinutesInDay = (target.depMins + offsetMinutes) % 1440;
+    const arrH = Math.floor(arrivalMinutesInDay / 60);
+    const arrM = arrivalMinutesInDay % 60;
+    const arrHStr = arrH.toString().padStart(2, "0");
+    const arrMStr = arrM.toString().padStart(2, "0");
     
-  if (upcoming.length > 0) {
-    const diff = upcoming[0].mins - osascoMinutesNow;
-    if (diff === 0) return "PARTIU";
-    return `${diff} MIN`;
+    // For very long off-peak times (like line 034 midday gaps), display the scheduled target cleanly
+    if (diff > 90) {
+      return `ÀS ${arrHStr}:${arrMStr} (Próx)`;
+    }
+    return `${diff} MIN (${arrHStr}:${arrMStr})`;
   }
   
-  // Tomorrow's first trip (wrap-around)
-  let tomorrowSchedule: string[] = [];
-  const tomorrowDayOfWeek = (dayOfWeek + 1) % 7;
-  if (tomorrowDayOfWeek === 0) {
-    tomorrowSchedule = scheduleDef.sunday;
-  } else if (tomorrowDayOfWeek === 6) {
-    tomorrowSchedule = scheduleDef.saturday;
-  } else {
-    tomorrowSchedule = scheduleDef.weekday;
-  }
-  
-  if (tomorrowSchedule.length > 0) {
-    const firstMins = parseTimeToMinutes(tomorrowSchedule[0]);
-    const diff = (1440 - osascoMinutesNow) + firstMins;
-    return `${diff} MIN`;
-  }
-  
-  return "SEM MAIS VIAGENS";
+  return `${diff} MIN`;
 }
 
 function getLineTimer(lineNumber: string): string {
   const cleanLine = lineNumber.trim().toUpperCase();
   if (cleanLine === "035" || cleanLine === "35") {
-    return getNextBusTime("035");
+    return getNextBusArrival("035", 50); // Line 035 takes about 50 minutes to Zumbi dos Palmares
   }
   if (cleanLine === "034" || cleanLine === "34") {
-    return getNextBusTime("034");
+    return getNextBusArrival("034", 25); // Line 034 takes about 25 minutes to Zumbi dos Palmares
   }
   if (cleanLine === "466X1" || cleanLine === "466EX1" || cleanLine === "466") {
-    return getNextBusTime("466X1");
+    return getNextBusArrival("466X1", 10); // Line 466X1 takes about 10 minutes to Zumbi dos Palmares
   }
   
   // Dynamic calculation for other lines

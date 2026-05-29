@@ -3100,13 +3100,29 @@ function PassengerPhone({
                   {(() => {
                     const rows: any[] = [];
                     const lineTime35 = getLineTime("035");
-                    const parsedTime35 = parseInt(lineTime35) || 12;
-
                     const lineTime34 = getLineTime("034");
-                    const parsedTime34 = parseInt(lineTime34) || 15;
-
                     const lineTime466 = getLineTime("466X1");
-                    const parsedTime466 = parseInt(lineTime466) || 8;
+
+                    const formatTime = (timeStr: string, fallbackMinutes: number) => {
+                      if (!timeStr) return `${fallbackMinutes} MIN`;
+                      const trimmed = timeStr.trim();
+                      if (
+                        trimmed.includes("MIN") || 
+                        trimmed.includes("AS") || 
+                        trimmed.includes("ÀS") || 
+                        trimmed === "PARTIU" || 
+                        trimmed.includes("OPERA") || 
+                        trimmed.includes("PRÓX") || 
+                        trimmed.includes("PROX") ||
+                        trimmed.includes("VIAGENS")
+                      ) {
+                        return trimmed;
+                      }
+                      if (/^\d+$/.test(trimmed)) {
+                        return `${trimmed} MIN`;
+                      }
+                      return trimmed;
+                    };
 
                     if (slide === "bus-035") {
                       rows.push({
@@ -3114,37 +3130,55 @@ function PassengerPhone({
                         name: "Circular Centro",
                         type: "CIRCULAR",
                         subtitle: "Circular • via Jd. Palmares",
-                        time: `${parsedTime35} MIN`
+                        time: formatTime(lineTime35, 12)
                       });
                     } else if (slide === "bus-034") {
+                      const baseTimeStr = formatTime(lineTime34, 15);
+                      let secondaryTimeStr = baseTimeStr;
+                      
+                      const match = lineTime34.match(/^(\d+)/);
+                      if (match) {
+                        const mins = parseInt(match[1], 10);
+                        secondaryTimeStr = `${mins + 5} MIN`;
+                      }
+
                       rows.push({
                         line: "034",
                         name: "Terminal (Subida)",
                         type: "SOBE",
                         subtitle: "SOBE • via Centro h.",
-                        time: `${parsedTime34} MIN`
+                        time: baseTimeStr
                       });
                       rows.push({
                         line: "034",
                         name: "Centro (Descida)",
                         type: "DESCE",
                         subtitle: "DESCE • via Jd. Palmares",
-                        time: `${parsedTime34 + 5} MIN`
+                        time: secondaryTimeStr
                       });
                     } else if (slide === "bus-466x1") {
+                      const baseTimeStr = formatTime(lineTime466, 8);
+                      let secondaryTimeStr = baseTimeStr;
+                      
+                      const match = lineTime466.match(/^(\d+)/);
+                      if (match) {
+                        const mins = parseInt(match[1], 10);
+                        secondaryTimeStr = `${mins + 7} MIN`;
+                      }
+
                       rows.push({
                         line: "466X1",
                         name: "Terminal (Subida)",
                         type: "SOBE",
                         subtitle: "SOBE • via Rodovia Exp",
-                        time: `${parsedTime466} MIN`
+                        time: baseTimeStr
                       });
                       rows.push({
                         line: "466X1",
                         name: "Centro (Descida)",
                         type: "DESCE",
                         subtitle: "DESCE • via Rodovia Exp",
-                        time: `${parsedTime466 + 7} MIN`
+                        time: secondaryTimeStr
                       });
                     }
 
