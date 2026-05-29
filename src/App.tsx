@@ -2225,7 +2225,7 @@ export default function App() {
         </div>
 
         {/* Sleek Tab Bar inside the cell phone screen area with active glow status borders */}
-        <div className="grid grid-cols-4 gap-0.5 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
+        <div className="grid grid-cols-3 gap-0.5 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
           <button
             type="button"
             onClick={() => setPhoneControlTab("telas")}
@@ -2241,14 +2241,6 @@ export default function App() {
           >
             <ListMusic className="w-3.5 h-3.5" />
             Play
-          </button>
-          <button
-            type="button"
-            onClick={() => setPhoneControlTab("audio")}
-            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "audio" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
-          >
-            <Megaphone className="w-3.5 h-3.5" />
-            Som
           </button>
           <button
             type="button"
@@ -2558,157 +2550,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: ÁUDIO & DIA DE JOGO */}
-        {phoneControlTab === "audio" && (
-          <div className="mb-3.5 bg-stone-950/40 p-2 rounded-2xl border border-stone-900/60 flex flex-col gap-2.5 font-sans">
-            <span className="text-[7px] font-mono font-bold text-stone-500 uppercase block tracking-widest text-center">
-              SOM, MULTIMÍDIA E SONOPLASTIA
-            </span>
-
-            {/* MONITOR MUTE TOGGLE CARD */}
-            <div className="bg-[#02180e] p-2.5 rounded-xl border border-emerald-500/10 flex flex-col gap-1.5 text-left">
-              <div className="flex justify-between items-center">
-                <span className="text-[8px] text-stone-400 font-extrabold uppercase tracking-wide">
-                  ÁUDIO DA TV
-                </span>
-                <span className={`text-[6px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                  activeMonitor?.mute ? 'bg-stone-900 text-stone-500' : 'bg-emerald-950 text-emerald-400 animate-pulse'
-                }`}>
-                  {activeMonitor?.mute ? "MUDO" : "NÃO MUTADO (ALTO-FALANTE)"}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (activeMonitor) {
-                    handleToggleMute(activeMonitor.id);
-                  }
-                }}
-                className={`w-full py-2.5 rounded-xl border text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md ${
-                  activeMonitor?.mute
-                    ? "bg-stone-900 hover:bg-stone-850 border-stone-800 text-stone-300"
-                    : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-emerald-400 text-white shadow-[0_3px_10px_rgba(16,185,129,0.25)]"
-                }`}
-              >
-                {activeMonitor?.mute ? (
-                  <>
-                    <VolumeX className="w-3.5 h-3.5 text-stone-400" />
-                    ATALHO: ATIVAR SOM (UNMUTE)
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="w-3.5 h-3.5 text-white animate-bounce" />
-                    DESATIVAR SOM (MUTAR)
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* MATCH DAY FX ACTIONS */}
-            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2 text-left">
-              <span className="text-[8px] text-yellow-500 font-extrabold uppercase tracking-wide block">
-                ⚽ SONOPLASTIA AO VIVO (DIA DO JOGO!)
-              </span>
-              
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => triggerSoundEffect("gol")}
-                  className="py-2 px-1 bg-green-950 hover:bg-green-900 active:scale-95 rounded-lg border border-green-700 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
-                >
-                  <span className="text-sm">⚽</span>
-                  <span>GRITO DE GOL!</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerSoundEffect("torcida")}
-                  className="py-2 px-1 bg-yellow-950 hover:bg-yellow-900 active:scale-95 rounded-lg border border-yellow-700 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
-                >
-                  <span className="text-sm">🥁</span>
-                  <span>TORCIDA</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerSoundEffect("apito")}
-                  className="py-2 px-1 bg-stone-900 hover:bg-stone-850 active:scale-95 rounded-lg border border-stone-750 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
-                >
-                  <span className="text-sm">🗣️</span>
-                  <span>APITO TÁTICO</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerSoundEffect("alerta")}
-                  className="py-2 px-1 bg-sky-950 hover:bg-sky-900 active:scale-95 rounded-lg border border-sky-750 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
-                >
-                  <span className="text-sm">🚨</span>
-                  <span>ALERTA</span>
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => triggerSoundEffect("sino")}
-                className="py-2 w-full bg-emerald-950/50 hover:bg-emerald-900 active:scale-95 rounded-lg border border-emerald-800 text-[8px] font-black text-emerald-300 flex items-center justify-center gap-1 transition-all shadow-md"
-              >
-                <span>🔔 SINO DE ANÚNCIO (DIN-DON)</span>
-              </button>
-            </div>
-
-            {/* TEXT TO SPEECH ANNOUNCER SECTION */}
-            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5 text-left">
-              <span className="text-[8px] text-[#10b981] font-black uppercase tracking-wide block">
-                🎙️ LOCUTOR DIGITAL (TEXT-TO-SPEECH)
-              </span>
-
-              <textarea
-                value={localSpeechText}
-                onChange={(e) => setLocalSpeechText(e.target.value)}
-                placeholder="Insira a frase para a TV falar ao vivo..."
-                rows={2}
-                className="w-full bg-[#020d08] border border-[#212121] text-[9px] p-2 rounded-xl text-white focus:outline-none focus:border-emerald-500 font-sans resize-none"
-              />
-
-              {/* QUICK PHRASES LIST */}
-              <div className="flex flex-col gap-1 mt-0.5">
-                <span className="text-[6.5px] text-stone-500 uppercase font-bold">FRASES DE ATALHO</span>
-                <div className="flex flex-wrap gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setLocalSpeechText("Atenção passageiros do Parque Palmares! Ônibus linha zero trinta e cinco se aproxima do terminal.")}
-                    className="text-[7px] font-medium bg-stone-900 hover:bg-stone-850 text-stone-300 px-1.5 py-0.5 rounded border border-stone-800"
-                  >
-                    🚌 Ônibus 035 vindo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocalSpeechText("Importante! Mantenha a faixa amarela livre. Segurança em primeiro lugar.")}
-                    className="text-[7px] font-medium bg-stone-900 hover:bg-stone-850 text-stone-300 px-1.5 py-0.5 rounded border border-stone-800"
-                  >
-                    ⚠️ Faixa Amarela
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocalSpeechText("Gol! É gol! Que golaço registrado na transmissão ao vivo do monitor principal!")}
-                    className="text-[7px] font-medium bg-stone-900 hover:bg-stone-850 text-stone-300 px-1.5 py-0.5 rounded border border-stone-800"
-                  >
-                    ⚽ Grito de Gol
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={triggerTTSAnnouncement}
-                className="w-full mt-1.5 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9px] py-2 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center flex items-center justify-center gap-1.5"
-              >
-                <Megaphone className="w-3.5 h-3.5" />
-                TRANSMITIR LOCUÇÃO NA TV
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* TAB 4: AJUSTES DA TELA ATIVA */}
         {phoneControlTab === "ajustes" && (
           <div className="mb-3.5 bg-stone-950/40 p-2 rounded-2xl border border-stone-900/60 flex flex-col gap-2.5 font-sans">
@@ -2768,6 +2609,46 @@ export default function App() {
                 className="w-full mt-1 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9.5px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center"
               >
                 Salvar Ajustes do Monitor
+              </button>
+            </div>
+
+            {/* MONITOR MUTE TOGGLE CARD DIRECTLY IN SETTINGS FOR MAXIMUM SIMPLICITY */}
+            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5 text-left">
+              <div className="flex justify-between items-center bg-[#02180e] px-2 py-1 rounded-lg border border-emerald-500/10">
+                <span className="text-[8px] text-stone-450 font-extrabold uppercase tracking-wide">
+                  ÁUDIO DA TV
+                </span>
+                <span className={`text-[6px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                  activeMonitor?.mute ? 'bg-stone-900 text-stone-500' : 'bg-emerald-950 text-emerald-400 animate-pulse'
+                }`}>
+                  {activeMonitor?.mute ? "MUDO" : "ALTO-FALANTE ATIVO"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMonitor) {
+                    handleToggleMute(activeMonitor.id);
+                  }
+                }}
+                className={`w-full py-2.5 rounded-xl border text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md ${
+                  activeMonitor?.mute
+                    ? "bg-stone-900 hover:bg-stone-850 border-stone-800 text-stone-300"
+                    : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-emerald-400 text-white shadow-[0_3px_10px_rgba(16,185,129,0.25)]"
+                }`}
+              >
+                {activeMonitor?.mute ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5 text-stone-400" />
+                    ATIVAR SOM DA TV (UNMUTE)
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-white animate-bounce" />
+                    DESATIVAR SOM DA TV (MUTAR)
+                  </>
+                )}
               </button>
             </div>
 
