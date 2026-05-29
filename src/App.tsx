@@ -86,7 +86,7 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
         videoId: videoId,
         playerVars: {
           autoplay: 1,
-          mute: 1,
+          mute: mute ? 1 : 0,
           controls: 0,
           rel: 0,
           modestbranding: 1,
@@ -102,7 +102,11 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           onReady: (event: any) => {
             if (active && event.target) {
               try {
-                event.target.mute();
+                if (mute) {
+                  event.target.mute();
+                } else {
+                  event.target.unMute();
+                }
                 event.target.playVideo();
               } catch (e) {
                 console.warn("Retrying playVideo:", e);
@@ -114,7 +118,11 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
                 try {
                   const state = event.target.getPlayerState();
                   if (state !== 1 && state !== 3) {
-                    event.target.mute();
+                    if (mute) {
+                      event.target.mute();
+                    } else {
+                      event.target.unMute();
+                    }
                     event.target.playVideo();
                   }
                 } catch (err) {}
@@ -180,6 +188,21 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
     };
   }, [videoId]);
 
+  // Handle dynamic unmuting/muting on the fly when prop changes
+  useEffect(() => {
+    if (playerRef.current && typeof playerRef.current.mute === "function") {
+      try {
+        if (mute) {
+          playerRef.current.mute();
+        } else {
+          playerRef.current.unMute();
+        }
+      } catch (err) {
+        console.warn("Error changing volume dynamically on YT Player:", err);
+      }
+    }
+  }, [mute]);
+
   return <div ref={containerRef} className={className} title={title} />;
 }
 
@@ -211,6 +234,239 @@ const BACKGROUND_PRESETS = {
 };
 
 
+// ============================================================================
+// REAL-TIME AUDIO SYNTHESIS & SPEECH BROADCAST ENGINE
+// ============================================================================
+
+function playSynthesizedSound(type: string) {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    if (type === "gol") {
+      // Roaring wind / cheering crowd sound!
+      const bufferSize = ctx.sampleRate * 2.5; 
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.Q.value = 1.0;
+      
+      filter.frequency.setValueAtTime(300, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.3);
+      filter.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 1.0);
+      filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 2.5);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.65, ctx.currentTime + 0.2);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.8);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.5);
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(620, ctx.currentTime + 0.25);
+      osc.frequency.linearRampToValueAtTime(340, ctx.currentTime + 1.2);
+      
+      oscGain.gain.setValueAtTime(0.01, ctx.currentTime);
+      oscGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.15);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+
+      noise.start();
+      osc.start();
+      
+      noise.stop(ctx.currentTime + 2.5);
+      osc.stop(ctx.currentTime + 2.5);
+
+    } else if (type === "apito") {
+      // Referee whistle sound
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.frequency.value = 1500;
+      osc2.frequency.value = 1535;
+
+      osc1.type = "sine";
+      osc2.type = "sine";
+
+      const mod = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      mod.frequency.value = 35; 
+      modGain.gain.value = 250; 
+
+      mod.connect(modGain);
+      modGain.connect(osc1.frequency);
+      modGain.connect(osc2.frequency);
+
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(0.30, ctx.currentTime + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      mod.start();
+      osc1.start();
+      osc2.start();
+
+      mod.stop(ctx.currentTime + 0.65);
+      osc1.stop(ctx.currentTime + 0.65);
+      osc2.stop(ctx.currentTime + 0.65);
+
+    } else if (type === "torcida") {
+      // Cheering crowd wave
+      const bufferSize = ctx.sampleRate * 3.5;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(320, ctx.currentTime);
+      filter.frequency.linearRampToValueAtTime(460, ctx.currentTime + 1.0);
+      filter.frequency.exponentialRampToValueAtTime(270, ctx.currentTime + 3.5);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 0.8);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 2.0);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.5);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start();
+      noise.stop(ctx.currentTime + 3.5);
+
+    } else if (type === "sino") {
+      // Crisp professional chime for terminal announcements (ding-don!)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = "sine";
+      osc1.frequency.value = 523.25; // C5
+      osc2.type = "sine";
+      osc2.frequency.value = 659.25; // E5
+
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(0.20, ctx.currentTime + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+
+      osc1.stop(ctx.currentTime + 2.0);
+      osc2.stop(ctx.currentTime + 2.0);
+
+    } else if (type === "alerta") {
+      // Alert chime (beep-boop!)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.25); // E5
+      osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.50); // G5
+
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.20, ctx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + 0.50);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.1);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 1.1);
+    }
+  } catch (err) {
+    console.warn("Failed playing synthesized audio:", err);
+  }
+}
+
+function speakAnnouncement(text: string) {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const ptVoice = voices.find(v => v.lang.startsWith("pt") || v.lang.includes("BR") || v.lang.includes("br"));
+    if (ptVoice) {
+      utterance.voice = ptVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn("Failed speech synthesis:", err);
+  }
+}
+
+interface AudioEffectsEmitterProps {
+  tvState: TVState;
+}
+
+function AudioEffectsEmitter({ tvState }: AudioEffectsEmitterProps) {
+  const lastSoundTimeRef = useRef<string | null | undefined>(tvState.soundEffectTime);
+  const lastSpeechTimeRef = useRef<string | null | undefined>(tvState.announcementSpeechTime);
+
+  useEffect(() => {
+    if (tvState.soundEffectTime && tvState.soundEffectTime !== lastSoundTimeRef.current) {
+      lastSoundTimeRef.current = tvState.soundEffectTime;
+      if (tvState.soundEffect) {
+        playSynthesizedSound(tvState.soundEffect);
+      }
+    }
+  }, [tvState.soundEffectTime, tvState.soundEffect]);
+
+  useEffect(() => {
+    if (tvState.announcementSpeechTime && tvState.announcementSpeechTime !== lastSpeechTimeRef.current) {
+      lastSpeechTimeRef.current = tvState.announcementSpeechTime;
+      if (tvState.announcementSpeech) {
+        speakAnnouncement(tvState.announcementSpeech);
+      }
+    }
+  }, [tvState.announcementSpeechTime, tvState.announcementSpeech]);
+
+  return null;
+}
+
+
 export default function App() {
   // Playground state for user-selected tab
   // "control": Only the Remote control smartphone (Tab 1)
@@ -218,7 +474,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"control" | "monitor">("control");
 
   // Phone remote control tab state
-  const [phoneControlTab, setPhoneControlTab] = useState<"telas" | "playlist" | "onibus" | "ajustes">("telas");
+  const [phoneControlTab, setPhoneControlTab] = useState<"telas" | "playlist" | "onibus" | "audio" | "ajustes">("telas");
   // Custom video input inside the mobile phone remote control
   const [newPhoneVideoInput, setNewPhoneVideoInput] = useState<string>("");
 
@@ -483,6 +739,10 @@ export default function App() {
   // Custom video input (add video to active monitor's playlist)
   const [newVideoInput, setNewVideoInput] = useState("");
   const [newMonitorNameInput, setNewMonitorNameInput] = useState("");
+  
+  // Custom audio integration for MATCH DAY / SONOPLASTIA
+  const [localSpeechText, setLocalSpeechText] = useState("Atenção passageiros do Parque Palmares! Ônibus linha 035 se aproxima do terminal.");
+  const [audioOverlayDismissed, setAudioOverlayDismissed] = useState(false);
   
   // Custom bus schedules controller
   const [newLineName, setNewLineName] = useState("");
@@ -1113,6 +1373,59 @@ export default function App() {
     setBusLinesDraft(busLinesDraft.filter(b => b.id !== id));
   };
 
+  const triggerSoundEffect = async (effect: string) => {
+    const timeStr = new Date().toISOString();
+    const nextState = {
+      ...tvStateRef.current,
+      soundEffect: effect,
+      soundEffectTime: timeStr,
+      updatedAt: timeStr
+    };
+    setTvState(nextState);
+    saveLocalFallback(nextState);
+    try {
+      const response = await fetch("/api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextState)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTvState(data.state);
+        saveLocalFallback(data.state);
+      }
+    } catch (e) {
+      console.warn("Erro ao enviar efeito de som para o servidor:", e);
+    }
+  };
+
+  const triggerTTSAnnouncement = async () => {
+    if (!localSpeechText.trim()) return;
+    const timeStr = new Date().toISOString();
+    const nextState = {
+      ...tvStateRef.current,
+      announcementSpeech: localSpeechText.trim(),
+      announcementSpeechTime: timeStr,
+      updatedAt: timeStr
+    };
+    setTvState(nextState);
+    saveLocalFallback(nextState);
+    try {
+      const response = await fetch("/api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextState)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTvState(data.state);
+        saveLocalFallback(data.state);
+      }
+    } catch (e) {
+      console.warn("Erro ao enviar locução para o servidor:", e);
+    }
+  };
+
   const handleAddBus = (e: FormEvent) => {
     e.preventDefault();
     if (!newLineName.trim()) return;
@@ -1186,6 +1499,22 @@ export default function App() {
         className={`w-screen h-screen overflow-hidden font-sans flex flex-col justify-between select-none relative bg-cover bg-center ${showCursor ? "cursor-default" : "cursor-none"}`}
         style={{ backgroundImage: `url(${BACKGROUND_PRESETS[bgStyle].url})` }}
       >
+        <AudioEffectsEmitter tvState={tvState} />
+        
+        {/* Floating click to activate sound banner if not dismissed yet */}
+        {!audioOverlayDismissed && (
+          <button
+            onClick={() => {
+              setAudioOverlayDismissed(true);
+              playSynthesizedSound("sino");
+            }}
+            className="absolute top-24 left-1/2 -translate-x-1/2 z-50 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-sans font-black text-[10px] md:text-xs py-2.5 px-5 rounded-2xl shadow-2xl flex items-center gap-2 cursor-pointer transition-all animate-bounce uppercase tracking-wider border border-yellow-500"
+          >
+            <Volume2 className="w-4 h-4 animate-pulse" />
+            Clique aqui para ativar áudio e locução ao vivo!
+          </button>
+        )}
+
         {/* Shadow Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/55 pointer-events-none z-0" />
         <div className="absolute inset-0 bg-radial-vignette pointer-events-none opacity-50 z-0" />
@@ -1348,6 +1677,7 @@ export default function App() {
 
   return (
     <div id="app-root" className="min-h-screen bg-stone-950 text-stone-100 font-sans flex flex-col justify-between selection:bg-yellow-405 selection:text-stone-900">
+      <AudioEffectsEmitter tvState={tvState} />
       
       {/* Dynamic Header */}
       <header className="bg-stone-900 border-b border-stone-800 py-3.5 px-6 shadow-md shrink-0">
@@ -1893,11 +2223,11 @@ export default function App() {
         </div>
 
         {/* Sleek Tab Bar inside the cell phone screen area with active glow status borders */}
-        <div className="grid grid-cols-4 gap-1 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
+        <div className="grid grid-cols-5 gap-0.5 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
           <button
             type="button"
             onClick={() => setPhoneControlTab("telas")}
-            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "telas" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "telas" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <Tv className="w-3.5 h-3.5" />
             Telas
@@ -1905,23 +2235,31 @@ export default function App() {
           <button
             type="button"
             onClick={() => setPhoneControlTab("playlist")}
-            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "playlist" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "playlist" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <ListMusic className="w-3.5 h-3.5" />
-            Playlist
+            Play
           </button>
           <button
             type="button"
             onClick={() => setPhoneControlTab("onibus")}
-            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "onibus" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "onibus" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <Bus className="w-3.5 h-3.5" />
-            Ônibus
+            Bus
+          </button>
+          <button
+            type="button"
+            onClick={() => setPhoneControlTab("audio")}
+            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "audio" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            Som
           </button>
           <button
             type="button"
             onClick={() => setPhoneControlTab("ajustes")}
-            className={`py-2 text-[8.1px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "ajustes" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
+            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "ajustes" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
           >
             <Settings className="w-3.5 h-3.5" />
             Ajustes
@@ -2280,6 +2618,157 @@ export default function App() {
                 className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-stone-950 font-black text-[9px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center mt-1"
               >
                 Salvar Localidade & Linhas
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: ÁUDIO & DIA DE JOGO */}
+        {phoneControlTab === "audio" && (
+          <div className="mb-3.5 bg-stone-950/40 p-2 rounded-2xl border border-stone-900/60 flex flex-col gap-2.5 font-sans">
+            <span className="text-[7px] font-mono font-bold text-stone-500 uppercase block tracking-widest text-center">
+              SOM, MULTIMÍDIA E SONOPLASTIA
+            </span>
+
+            {/* MONITOR MUTE TOGGLE CARD */}
+            <div className="bg-[#02180e] p-2.5 rounded-xl border border-emerald-500/10 flex flex-col gap-1.5 text-left">
+              <div className="flex justify-between items-center">
+                <span className="text-[8px] text-stone-400 font-extrabold uppercase tracking-wide">
+                  ÁUDIO DA TV
+                </span>
+                <span className={`text-[6px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                  activeMonitor?.mute ? 'bg-stone-900 text-stone-500' : 'bg-emerald-950 text-emerald-400 animate-pulse'
+                }`}>
+                  {activeMonitor?.mute ? "MUDO" : "NÃO MUTADO (ALTO-FALANTE)"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMonitor) {
+                    handleToggleMute(activeMonitor.id);
+                  }
+                }}
+                className={`w-full py-2.5 rounded-xl border text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md ${
+                  activeMonitor?.mute
+                    ? "bg-stone-900 hover:bg-stone-850 border-stone-800 text-stone-300"
+                    : "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-emerald-400 text-white shadow-[0_3px_10px_rgba(16,185,129,0.25)]"
+                }`}
+              >
+                {activeMonitor?.mute ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5 text-stone-400" />
+                    ATALHO: ATIVAR SOM (UNMUTE)
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-white animate-bounce" />
+                    DESATIVAR SOM (MUTAR)
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* MATCH DAY FX ACTIONS */}
+            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2 text-left">
+              <span className="text-[8px] text-yellow-500 font-extrabold uppercase tracking-wide block">
+                ⚽ SONOPLASTIA AO VIVO (DIA DO JOGO!)
+              </span>
+              
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => triggerSoundEffect("gol")}
+                  className="py-2 px-1 bg-green-950 hover:bg-green-900 active:scale-95 rounded-lg border border-green-700 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
+                >
+                  <span className="text-sm">⚽</span>
+                  <span>GRITO DE GOL!</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerSoundEffect("torcida")}
+                  className="py-2 px-1 bg-yellow-950 hover:bg-yellow-900 active:scale-95 rounded-lg border border-yellow-700 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
+                >
+                  <span className="text-sm">🥁</span>
+                  <span>TORCIDA</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerSoundEffect("apito")}
+                  className="py-2 px-1 bg-stone-900 hover:bg-stone-850 active:scale-95 rounded-lg border border-stone-750 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
+                >
+                  <span className="text-sm">🗣️</span>
+                  <span>APITO TÁTICO</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerSoundEffect("alerta")}
+                  className="py-2 px-1 bg-sky-950 hover:bg-sky-900 active:scale-95 rounded-lg border border-sky-750 text-[8px] font-black text-white flex flex-col items-center justify-center gap-1 transition-all shadow-md leading-none"
+                >
+                  <span className="text-sm">🚨</span>
+                  <span>ALERTA</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => triggerSoundEffect("sino")}
+                className="py-2 w-full bg-emerald-950/50 hover:bg-emerald-900 active:scale-95 rounded-lg border border-emerald-800 text-[8px] font-black text-emerald-300 flex items-center justify-center gap-1 transition-all shadow-md"
+              >
+                <span>🔔 SINO DE ANÚNCIO (DIN-DON)</span>
+              </button>
+            </div>
+
+            {/* TEXT TO SPEECH ANNOUNCER SECTION */}
+            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5 text-left">
+              <span className="text-[8px] text-[#10b981] font-black uppercase tracking-wide block">
+                🎙️ LOCUTOR DIGITAL (TEXT-TO-SPEECH)
+              </span>
+
+              <textarea
+                value={localSpeechText}
+                onChange={(e) => setLocalSpeechText(e.target.value)}
+                placeholder="Insira a frase para a TV falar ao vivo..."
+                rows={2}
+                className="w-full bg-[#020d08] border border-[#212121] text-[9px] p-2 rounded-xl text-white focus:outline-none focus:border-emerald-500 font-sans resize-none"
+              />
+
+              {/* QUICK PHRASES LIST */}
+              <div className="flex flex-col gap-1 mt-0.5">
+                <span className="text-[6.5px] text-stone-500 uppercase font-bold">FRASES DE ATALHO</span>
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setLocalSpeechText("Atenção passageiros do Parque Palmares! Ônibus linha zero trinta e cinco se aproxima do terminal.")}
+                    className="text-[7px] font-medium bg-stone-900 hover:bg-stone-850 text-stone-300 px-1.5 py-0.5 rounded border border-stone-800"
+                  >
+                    🚌 Ônibus 035 vindo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocalSpeechText("Importante! Mantenha a faixa amarela livre. Segurança em primeiro lugar.")}
+                    className="text-[7px] font-medium bg-stone-900 hover:bg-stone-850 text-stone-300 px-1.5 py-0.5 rounded border border-stone-800"
+                  >
+                    ⚠️ Faixa Amarela
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocalSpeechText("Gol! É gol! Que golaço registrado na transmissão ao vivo do monitor principal!")}
+                    className="text-[7px] font-medium bg-stone-900 hover:bg-stone-850 text-stone-300 px-1.5 py-0.5 rounded border border-stone-800"
+                  >
+                    ⚽ Grito de Gol
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={triggerTTSAnnouncement}
+                className="w-full mt-1.5 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9px] py-2 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center flex items-center justify-center gap-1.5"
+              >
+                <Megaphone className="w-3.5 h-3.5" />
+                TRANSMITIR LOCUÇÃO NA TV
               </button>
             </div>
           </div>

@@ -25,5 +25,10 @@ export interface TVState {
   busLines: BusLine[];
   monitors: MonitorState[];
   updatedAt: string;
+  soundEffect?: string | null;
+  soundEffectTime?: string | null;
+  stadiumAmbient?: boolean;
+  announcementSpeech?: string | null;
+  announcementSpeechTime?: string | null;
 }
 

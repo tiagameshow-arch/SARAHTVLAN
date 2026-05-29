@@ -33,6 +33,11 @@ interface TVState {
   busLines: BusLine[];
   monitors: MonitorState[];
   updatedAt: string;
+  soundEffect?: string | null;
+  soundEffectTime?: string | null;
+  stadiumAmbient?: boolean;
+  announcementSpeech?: string | null;
+  announcementSpeechTime?: string | null;
 }
 
 const STATE_FILE_PATH = path.join(__dirname, "tv-state.json");
@@ -211,6 +216,11 @@ async function startServer() {
     if (newsTicker !== undefined) tvState.newsTicker = newsTicker;
     if (busLines !== undefined && Array.isArray(busLines)) tvState.busLines = busLines;
     if (monitors !== undefined && Array.isArray(monitors)) tvState.monitors = monitors;
+    if (req.body.soundEffect !== undefined) tvState.soundEffect = req.body.soundEffect;
+    if (req.body.soundEffectTime !== undefined) tvState.soundEffectTime = req.body.soundEffectTime;
+    if (req.body.stadiumAmbient !== undefined) tvState.stadiumAmbient = req.body.stadiumAmbient;
+    if (req.body.announcementSpeech !== undefined) tvState.announcementSpeech = req.body.announcementSpeech;
+    if (req.body.announcementSpeechTime !== undefined) tvState.announcementSpeechTime = req.body.announcementSpeechTime;
     
     tvState.updatedAt = new Date().toISOString();
     
