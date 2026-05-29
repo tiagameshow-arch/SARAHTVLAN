@@ -33,6 +33,7 @@ interface TVState {
   busLines: BusLine[];
   monitors: MonitorState[];
   updatedAt: string;
+  deletedMonitorIds?: string[];
   soundEffect?: string | null;
   soundEffectTime?: string | null;
   stadiumAmbient?: boolean;
@@ -184,8 +185,11 @@ async function startServer() {
   // Support JSON request parser
   app.use(express.json());
 
-  // Track explicitly deleted monitors to prevent background pings of resurrecting them automatically
-  const deletedMonitorIds = new Set<string>();
+  // Track explicitly deleted monitors to prevent background pings from resurrecting them automatically
+  // Initialize from persisted state if present, otherwise fallback
+  if (!tvState.deletedMonitorIds) {
+    tvState.deletedMonitorIds = [];
+  }
 
   // API Route - Get current state
   app.get("/api/state", (req, res) => {
@@ -197,18 +201,23 @@ async function startServer() {
     const { temperature, newsTicker, busLines, monitors } = req.body;
     
     if (monitors !== undefined && Array.isArray(monitors)) {
+      if (!tvState.deletedMonitorIds) {
+        tvState.deletedMonitorIds = [];
+      }
       // Find monitors that were in the original tvState but are not in the new array
       const oldIds = tvState.monitors.map(m => m.id);
       const newIds = monitors.map(m => m.id);
       oldIds.forEach(id => {
         if (!newIds.includes(id)) {
-          deletedMonitorIds.add(id);
-          console.log(`[Presence] Monitor adicionado à lista de exclusão voluntária: ${id}`);
+          if (!tvState.deletedMonitorIds!.includes(id)) {
+            tvState.deletedMonitorIds!.push(id);
+          }
+          console.log(`[Presence] Monitor adicionado à lista persistente de exclusão: ${id}`);
         }
       });
-      // When a monitor is added/present, ensure it's removed of deleted list
+      // When a monitor is added/present, ensure it's removed from deleted list
       newIds.forEach(id => {
-        deletedMonitorIds.delete(id);
+        tvState.deletedMonitorIds = tvState.deletedMonitorIds!.filter(x => x !== id);
       });
     }
 
@@ -224,7 +233,8 @@ async function startServer() {
     
     tvState.updatedAt = new Date().toISOString();
     
-    // Broadcast changes to all open streams
+    // Broadcast changes to all open streams and save state
+    saveStateToDisk(tvState);
     broadcastState();
     
     res.json({ success: true, state: tvState });
@@ -238,7 +248,7 @@ async function startServer() {
     }
 
     // Ignore ping if this monitor was explicitly deleted inside the dashboard
-    if (deletedMonitorIds.has(id)) {
+    if (tvState.deletedMonitorIds && tvState.deletedMonitorIds.includes(id)) {
       return res.json({ success: false, error: "Monitor was explicitly deleted", state: tvState });
     }
 
@@ -255,11 +265,17 @@ async function startServer() {
     let changed = false;
 
     if (existingIndex === -1) {
-      // Create it dynamically with a unique playlist "ter sua propria playlist! assim os videos serão diferentes!"
+      // ONLY auto-register default pre-configured IDs or other physical monitors if not custom.
+      // To prevent zombie resurrect chains, do NOT auto-register arbitrary "monitor-" IDs on ping. 
+      // They must be explicitly created via "+ Cadastrar Novo Monitor" inside the phone remote controller!
+      if (id.startsWith("monitor-")) {
+        return res.json({ success: false, error: "Monitor does not exist and cannot be auto-registered on ping", state: tvState });
+      }
+
+      // Create pre-configured monitor (e.g. terminal-principal)
       const presetsPool = ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E", "_eH8u94IkyY"];
-      // Randomly select 2 to 3 videos for this monitor
       const shuffled = [...presetsPool].sort(() => 0.5 - Math.random());
-      const initialPlaylist = shuffled.slice(0, 2 + Math.floor(Math.random() * 2));
+      const initialPlaylist = shuffled.slice(0, 2);
 
       const newMonitor = {
         id,
@@ -293,6 +309,7 @@ async function startServer() {
 
     if (changed) {
       tvState.updatedAt = new Date().toISOString();
+      saveStateToDisk(tvState);
       broadcastState();
     }
 

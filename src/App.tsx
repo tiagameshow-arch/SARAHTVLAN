@@ -474,7 +474,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"control" | "monitor">("control");
 
   // Phone remote control tab state
-  const [phoneControlTab, setPhoneControlTab] = useState<"telas" | "playlist" | "onibus" | "audio" | "ajustes">("telas");
+  const [phoneControlTab, setPhoneControlTab] = useState<"telas" | "playlist" | "audio" | "ajustes">("telas");
   // Custom video input inside the mobile phone remote control
   const [newPhoneVideoInput, setNewPhoneVideoInput] = useState<string>("");
 
@@ -768,7 +768,7 @@ export default function App() {
       setLocationValue(selectedMon.location || "");
       setCustomBusLinesValue(selectedMon.customBusLines || "");
     }
-  }, [selectedMonitorId, tvState.monitors]);
+  }, [selectedMonitorId]);
 
   // Keep a mutable ref of the state so the SSE/EventSource useEffect doesn't have to keep reconnecting on state changes
   const tvStateRef = useRef<TVState>(tvState);
@@ -2223,7 +2223,7 @@ export default function App() {
         </div>
 
         {/* Sleek Tab Bar inside the cell phone screen area with active glow status borders */}
-        <div className="grid grid-cols-5 gap-0.5 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
+        <div className="grid grid-cols-4 gap-0.5 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
           <button
             type="button"
             onClick={() => setPhoneControlTab("telas")}
@@ -2239,14 +2239,6 @@ export default function App() {
           >
             <ListMusic className="w-3.5 h-3.5" />
             Play
-          </button>
-          <button
-            type="button"
-            onClick={() => setPhoneControlTab("onibus")}
-            className={`py-2 text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider rounded-lg border transition-all duration-150 flex flex-col items-center justify-center gap-0.5 ${phoneControlTab === "onibus" ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.35)]' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-200'}`}
-          >
-            <Bus className="w-3.5 h-3.5" />
-            Bus
           </button>
           <button
             type="button"
@@ -2564,65 +2556,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: ÔNIBUS DA TELA ATIVA */}
-        {phoneControlTab === "onibus" && activeMonitor && (
-          <div className="mb-3.5 bg-stone-950/40 p-2.5 rounded-2xl border border-stone-900/60 flex flex-col gap-3 font-sans text-left">
-            <span className="text-[7.5px] font-mono font-bold text-center text-emerald-400 uppercase tracking-widest block mb-0.5 animate-pulse">
-              ➔ HORÁRIOS & LOCALIZAÇÃO
-            </span>
-
-            {/* Current monitor location information info card */}
-            <div className="bg-[#03150d] border border-emerald-500/15 p-2 rounded-xl text-[8.5px] leading-relaxed">
-              <span className="text-emerald-400 font-black tracking-wider uppercase block text-[7px] mb-1">MONITOR SELECIONADO:</span>
-              <p className="font-bold text-white uppercase">{activeMonitor.name}</p>
-              <p className="text-stone-300 mt-1">📍 Ponto: <span className="text-yellow-455 font-bold">{activeMonitor.location || "Avenida Zumbi dos Palmares"}</span></p>
-              <p className="text-stone-300 mt-0.5">🚌 Linhas: <span className="text-emerald-400 font-mono font-black">{activeMonitor.customBusLines || "035/034/461X1"}</span></p>
-            </div>
-
-            {/* Editing fields */}
-            <div className="flex flex-col gap-2 bg-stone-950/85 border border-stone-850 p-2 rounded-xl">
-              <div>
-                <label className="text-[7.5px] text-stone-400 font-extrabold uppercase tracking-widest block">
-                  📍 Ponto / Rua / Localização Física
-                </label>
-                <input
-                  type="text"
-                  value={locationValue}
-                  onChange={(e) => setLocationValue(e.target.value)}
-                  placeholder="Ex: Av. Zumbi dos Palmares..."
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
-                />
-              </div>
-
-              <div>
-                <label className="text-[7.5px] text-stone-400 font-extrabold uppercase tracking-widest block">
-                  🚌 Linhas de Ônibus (separadas por "/")
-                </label>
-                <input
-                  type="text"
-                  value={customBusLinesValue}
-                  onChange={(e) => setCustomBusLinesValue(e.target.value)}
-                  placeholder="Ex: 035/034/461X1"
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (activeMonitor) {
-                    handleUpdateMonitorDetails(activeMonitor.id, activeMonitor.name, locationValue, customBusLinesValue);
-                    alert("Dados salvos e transmitidos com sucesso para a TV!");
-                  }
-                }}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-stone-950 font-black text-[9px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center mt-1"
-              >
-                Salvar Localidade & Linhas
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* TAB 4: ÁUDIO & DIA DE JOGO */}
         {phoneControlTab === "audio" && (
           <div className="mb-3.5 bg-stone-950/40 p-2 rounded-2xl border border-stone-900/60 flex flex-col gap-2.5 font-sans">
@@ -2781,7 +2714,7 @@ export default function App() {
               OPÇÕES DO MONITOR ATIVO
             </span>
 
-            {/* In-Phone Rename & Location Form */}
+            {/* In-Phone Options Form (Name, Location, Bus Lines) */}
             <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2">
               <div>
                 <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
@@ -2796,17 +2729,43 @@ export default function App() {
                 />
               </div>
 
+              <div>
+                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
+                  📍 Ponto / Rua / Localização Física
+                </label>
+                <input
+                  type="text"
+                  value={locationValue}
+                  onChange={(e) => setLocationValue(e.target.value)}
+                  placeholder="Ex: Av. Zumbi dos Palmares..."
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
+                  🚌 Linhas de Ônibus (separadas por "/")
+                </label>
+                <input
+                  type="text"
+                  value={customBusLinesValue}
+                  onChange={(e) => setCustomBusLinesValue(e.target.value)}
+                  placeholder="Ex: 035/034/461X1"
+                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
+                />
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
                   if (activeMonitor) {
-                    handleRenameMonitor(activeMonitor.id, renameValue);
-                    alert("Identificação do monitor atualizada com sucesso!");
+                    handleUpdateMonitorDetails(activeMonitor.id, renameValue, locationValue, customBusLinesValue);
+                    alert("Ajustes do monitor atualizados com sucesso!");
                   }
                 }}
                 className="w-full mt-1 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-black text-[9.5px] py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-md font-sans text-center"
               >
-                Salvar Nome
+                Salvar Ajustes do Monitor
               </button>
             </div>
 
