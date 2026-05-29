@@ -642,14 +642,14 @@ export default function App() {
       busLines: [
         { id: "1", line: "035", time: "7 MIN" },
         { id: "2", line: "034", time: "15 MIN" },
-        { id: "3", line: "466", time: "30 MIN" }
+        { id: "3", line: "466X1", time: "30 MIN" }
       ],
       monitors: [
         {
           id: "terminal-principal",
           name: "Monitor Principal - Terminal",
           location: "Terminal Central",
-          customBusLines: "035/034/466",
+          customBusLines: "035/034/466X1",
           playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
           currentVideoIndex: 0,
           isPlaying: true,
@@ -2203,7 +2203,7 @@ export default function App() {
               </p>
 
               <div className="flex flex-wrap gap-1 mt-2">
-                {(activeMonitor?.customBusLines || "035/034/461X1").split('/').map((line, i) => {
+                {(activeMonitor?.customBusLines || "035/034/466X1").split('/').map((line, i) => {
                   const cleanLine = line.trim();
                   if (!cleanLine) return null;
                   const time = getLineTime(cleanLine);
@@ -2607,7 +2607,7 @@ export default function App() {
                   type="text"
                   value={customBusLinesValue}
                   onChange={(e) => setCustomBusLinesValue(e.target.value)}
-                  placeholder="Ex: 035/034/461X1"
+                  placeholder="Ex: 035/034/466X1"
                   className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-mono px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450"
                 />
               </div>
@@ -2964,7 +2964,7 @@ function PassengerPhone({
                   </span>
 
                   {(() => {
-                    const lineGroup = (activeMonitor?.customBusLines || "035/034/461X1").split("/");
+                    const lineGroup = (activeMonitor?.customBusLines || "035/034/466X1").split("/");
                     const validLines = lineGroup.filter((line: string) => line.trim());
                     if (validLines.length === 0) {
                       return (

@@ -1,0 +1,41 @@
+{
+  "temperature": "20°C - Céu Limpo",
+  "newsTicker": "GIRO SP: Novas linhas de ônibus integradas e asfalto reforçado na Avenida Zumbi dos Palmares melhoram a mobilidade no Parque Palmares.",
+  "busLines": [
+    {
+      "id": "1",
+      "line": "035",
+      "time": "CARREGANDO..."
+    },
+    {
+      "id": "2",
+      "line": "034",
+      "time": "CARREGANDO..."
+    },
+    {
+      "id": "3",
+      "line": "466X1",
+      "time": "CARREGANDO..."
+    }
+  ],
+  "monitors": [
+    {
+      "id": "terminal-principal",
+      "name": "Monitor Principal - Terminal",
+      "location": "Terminal Central",
+      "customBusLines": "035/034/466X1",
+      "playlist": [
+        "ysz5S6PUM-U",
+        "S_dfq9rFWAE",
+        "5gK9m6W-i8E"
+      ],
+      "currentVideoIndex": 0,
+      "isPlaying": true,
+      "mute": true,
+      "orientation": "landscape",
+      "isOnline": true
+    }
+  ],
+  "updatedAt": "2026-05-29T10:37:40.334Z",
+  "deletedMonitorIds": []
+}

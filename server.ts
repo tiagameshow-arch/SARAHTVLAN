@@ -71,16 +71,16 @@ function loadStateFromDisk(): TVState {
     temperature: "20°C - Céu Limpo",
     newsTicker: "GIRO SP: Novas linhas de ônibus integradas e asfalto reforçado na Avenida Zumbi dos Palmares melhoram a mobilidade no Parque Palmares.",
     busLines: [
-      { id: "1", line: "038", time: "CARREGANDO..." },
-      { id: "2", line: "194", time: "CARREGANDO..." },
-      { id: "3", line: "466EX1", time: "CARREGANDO..." }
+      { id: "1", line: "035", time: "CARREGANDO..." },
+      { id: "2", line: "034", time: "CARREGANDO..." },
+      { id: "3", line: "466X1", time: "CARREGANDO..." }
     ],
     monitors: [
       {
         id: "terminal-principal",
         name: "Monitor Principal - Terminal",
         location: "Terminal Central",
-        customBusLines: "038/194/466EX1",
+        customBusLines: "035/034/466X1",
         playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
         currentVideoIndex: 0,
         isPlaying: true,
@@ -114,17 +114,17 @@ function broadcastState() {
 
 // Real Timetables from Uploaded Images
 const BUS_SCHEDULES: Record<string, { weekday: string[]; saturday: string[]; sunday: string[] }> = {
-  "038": {
+  "035": {
     weekday: ["04:25", "04:45", "05:10", "05:30", "05:45", "06:10", "06:35", "07:00", "07:45", "08:30", "09:10", "09:55", "10:45", "11:30", "12:25", "13:10", "13:40", "14:15", "14:50", "15:20", "15:55", "16:30", "17:05", "17:50", "18:35", "19:20", "20:05", "20:55", "21:35", "22:25", "23:15"],
     saturday: ["04:35", "05:05", "05:40", "06:15", "06:55", "07:30", "08:15", "08:50", "09:20", "09:45", "10:20", "11:20", "12:20", "13:05", "13:55", "14:25", "15:00", "15:35", "16:00", "16:35", "17:10", "17:45", "18:35", "19:35", "21:10", "22:30"],
     sunday: ["05:00", "06:10", "07:25", "08:40", "10:05", "12:20", "13:50", "15:15", "16:40", "18:00", "19:20", "21:35", "22:50"]
   },
-  "194": {
+  "034": {
     weekday: ["05:05", "05:15", "05:35", "05:45", "06:00", "19:45", "20:15", "20:25", "20:35", "20:45", "20:55", "21:15", "22:40"],
     saturday: ["05:00", "05:10", "08:00", "15:25"],
     sunday: ["05:00", "07:00", "21:35"]
   },
-  "466EX1": {
+  "466X1": {
     weekday: ["05:33", "06:15", "07:15", "07:55", "09:00", "09:50", "10:45", "11:30", "12:50", "13:55", "14:35", "15:20", "16:05", "18:05", "19:20", "20:30", "22:00"],
     saturday: [],
     sunday: []
@@ -218,14 +218,14 @@ function getNextBusTime(lineKey: string): string {
 
 function getLineTimer(lineNumber: string): string {
   const cleanLine = lineNumber.trim().toUpperCase();
-  if (cleanLine === "038" || cleanLine === "38") {
-    return getNextBusTime("038");
+  if (cleanLine === "035" || cleanLine === "35") {
+    return getNextBusTime("035");
   }
-  if (cleanLine === "194") {
-    return getNextBusTime("194");
+  if (cleanLine === "034" || cleanLine === "34") {
+    return getNextBusTime("034");
   }
-  if (cleanLine === "466EX1" || cleanLine === "466") {
-    return getNextBusTime("466EX1");
+  if (cleanLine === "466X1" || cleanLine === "466EX1" || cleanLine === "466") {
+    return getNextBusTime("466X1");
   }
   
   // Dynamic calculation for other lines
@@ -437,7 +437,7 @@ async function startServer() {
         id,
         name: name || `Monitor ${id.toUpperCase()}`,
         location: id === "terminal-principal" ? "Terminal Central" : "Avenida Zumbi dos Palmares",
-        customBusLines: id === "terminal-principal" ? "038/194/466EX1" : "038/194/466EX1",
+        customBusLines: "035/034/466X1",
         playlist: initialPlaylist,
         currentVideoIndex: 0,
         isPlaying: true,
