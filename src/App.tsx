@@ -1670,23 +1670,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* ROW 3: SCROLLING TICKER NEWS FOOTER AT THE VERY BOTTOM - CO-BRANDED WITH SARAHGAMES LOGO */}
-        <div className="h-24 bg-[#090209] border-t-4 border-[#ee1d82] flex items-center z-20 shrink-0 shadow-lg select-none relative">
-          <div className="h-full px-8 bg-[#ee1d82] flex items-center justify-center shrink-0 shadow-2xl z-10 border-r border-[#ff53a6]/50">
-            <img 
-              src="/sarah_games.png" 
-              className="h-16 w-16 object-contain rounded-full shadow-[0_0_15px_rgba(238,29,130,0.75)] border-2 border-white animate-pulse" 
-              alt="SarahGames Logo"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <div className="overflow-hidden relative w-full h-full flex items-center text-white bg-gradient-to-r from-stone-950 to-[#120110]">
-            <div className="absolute whitespace-nowrap animate-marquee flex items-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-widest pl-6">
-              <span className="text-[#ee1d82] mr-4 text-xl sm:text-2xl">🎮</span>
-              <span>{tvState.newsTicker}</span>
-            </div>
-          </div>
-        </div>
+        {/* ROW 3: Removed bottom news ticker as per user request to maximize screen focus and clean the console layout */}
 
       </div>
     );
@@ -2800,13 +2784,179 @@ interface PassengerPhoneProps {
 
 const SLIDES_SEQUENCE = [
   "weather",
-  "bus-035",
-  "bus-034",
-  "bus-466x1",
-  "news-g1",
-  "news-ge",
-  "news-cnn"
+  "news-bairro",
+  "news-geral",
+  "news-esportes",
+  "news-fofocas",
+  "news-gospel"
 ];
+
+interface NewsArticle {
+  title: string;
+  subtitle: string;
+  source: string;
+  image: string;
+  time: string;
+  badge: string;
+  badgeColor: string;
+}
+
+const ALL_NEWS_DATABASE: Record<string, NewsArticle[]> = {
+  bairro: [
+    {
+      title: "AVENIDA ZUMBI DOS PALMARES RECEBE NOVO RECAPEAMENTO COMPLETO E LUZ INTEGRAL LED",
+      subtitle: "Asfalto novo, sinalização reforçada e iluminação branca em LED trazem extrema segurança aos moradores do Parque Palmares.",
+      source: "Gazeta de Osasco • Bairro",
+      image: "https://images.unsplash.com/photo-1544982503-9f984c14501a?w=450&auto=format&fit=crop&q=80",
+      time: "Há 4 min",
+      badge: "INFRAESTRUTURA",
+      badgeColor: "bg-amber-100/90 text-amber-900 border border-amber-205"
+    },
+    {
+      title: "FEIRA CULTURAL DE DOMINGO NA ZUMBI DOS PALMARES REÚNE PÚBLICO RECORDE COM PASTÉIS E ARTESANATO",
+      subtitle: "Novos feirantes, música instrumental beneficente e doces artesanais mobilizam centenas de famílias no final de semana.",
+      source: "Bairro em Foco • Palmares",
+      image: "https://images.unsplash.com/photo-1488459711615-466d6a2f4da8?w=450&auto=format&fit=crop&q=80",
+      time: "Há 42 min",
+      badge: "COMÉRCIO LOCAL",
+      badgeColor: "bg-emerald-100/90 text-emerald-950 border border-emerald-200"
+    },
+    {
+      title: "NOVA CRECHE INTEGRADA DO JARDIM PALMARES AMPLIA VAGAS PARA 250 BEBÊS DE MÃES TRABALHADORAS",
+      subtitle: "Inauguração com auditório, refeitório assistido e parquinho em verniz ecológico gera elogios gerais dos moradores.",
+      source: "Portal Osasco Leste • Educação",
+      image: "https://images.unsplash.com/photo-1576267423445-b2e0074d68a4?w=450&auto=format&fit=crop&q=80",
+      time: "Há 2 horas",
+      badge: "EDUCAÇÃO",
+      badgeColor: "bg-blue-100/90 text-blue-900 border border-blue-200"
+    },
+    {
+      title: "MUTIRÃO SOLIDÁRIO NO PARQUE PALMARES DISTRIBUI CESTAS BÁSICAS E ATENDIMENTO ODONTOLÓGICO",
+      subtitle: "Igrejas unidas organizam ação cívica de alta ajuda na quadra pública, com dentistas voluntários grátis.",
+      source: "Jornal do Palmares • Solidário",
+      image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=450&auto=format&fit=crop&q=80",
+      time: "Há 5 horas",
+      badge: "AÇÃO SOCIAL",
+      badgeColor: "bg-purple-100/90 text-purple-900 border border-purple-200"
+    }
+  ],
+  geral: [
+    {
+      title: "G1: FRENTE FRIA AVANÇA EM SP COM ALERTA DE CHUVA SEVERA E VENTOS DE ATÉ 60KM/H",
+      subtitle: "Defesa Civil paulista emite comunicado de atenção para queda histórica de temperatura de até 12 graus.",
+      source: "g1 Osasco",
+      image: "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=450&auto=format&fit=crop&q=80",
+      time: "Há 2 min",
+      badge: "ALERTA TEMPO",
+      badgeColor: "bg-red-100 text-red-900 border border-red-200"
+    },
+    {
+      title: "CNN: TARIFA INTEGRADA DE ÔNIBUS DO SISTEMA EMTU SOFRE ATUALIZAÇÃO BENÉFICA PARA TRABALHADOR",
+      subtitle: "Novas regras de integração de bilhetes metropolitanos ampliam limite de tempo e reduzem tarifas conexas.",
+      source: "CNN Brasil",
+      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=450&auto=format&fit=crop&q=80",
+      time: "Há 20 min",
+      badge: "UTILIDADE PÚBLICA",
+      badgeColor: "bg-indigo-100 text-indigo-900 border border-indigo-200"
+    },
+    {
+      title: "ANVISA HOMOLOGA NOVO TESTE RÁPIDO DISPONÍVEL EM FARMÁCIAS QUE DETECTA 4 INFLUENZAS EM 10 MIN",
+      subtitle: "Revolução diagnóstica de tecnologia nacional agiliza o isolamento de gripes fortes e minimiza filas hospitalares.",
+      source: "g1 Saúde",
+      image: "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=450&auto=format&fit=crop&q=80",
+      time: "Há 1 hora",
+      badge: "SAÚDE PÚBLICA",
+      badgeColor: "bg-teal-100 text-teal-900 border border-teal-200"
+    }
+  ],
+  esportes: [
+    {
+      title: "GE: ABEL FERREIRA RETORNA COM TITULARES PESADOS E GARANTE TIME COM SEDE DE ATAQUE NO ALLIANZ",
+      subtitle: "Allianz Parque atinge marca de 38 mil ingressos comprados de forma antecipada. Promessa de caldeirão verde.",
+      source: "ge São Paulo",
+      image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=450&auto=format&fit=crop&q=80",
+      time: "Há 12 min",
+      badge: "BRASILEIRÃO 2026",
+      badgeColor: "bg-emerald-100 text-emerald-900 border border-emerald-300"
+    },
+    {
+      title: "SANTOS ESTUDA ESTREIA DE DUAS NOVAS JOIAS SUL-AMERICANAS JOGANDO NA VILA BELMIRO",
+      subtitle: "Regularização no BID acontece no início da noite e Carille sinaliza que ambos começam no banco para ganhar ritmo.",
+      source: "Gazeta Esportiva",
+      image: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=450&auto=format&fit=crop&q=80",
+      time: "Há 28 min",
+      badge: "SANTOS FC",
+      badgeColor: "bg-slate-100 text-slate-900 border border-slate-300"
+    },
+    {
+      title: "SÃO PAULO PRORROGA CONTRATO COM SUCESSO DE ATACANTE APÓS ASSÉDIO DO FUTEBOL ITALIANO",
+      subtitle: "Tricolor estende o vínculo de forma estratégica com multa gorda e bonificações indexadas a metas de gols.",
+      source: "ge Tricolor",
+      image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=450&auto=format&fit=crop&q=80",
+      time: "Há 2 horas",
+      badge: "TRICOLOR",
+      badgeColor: "bg-rose-100 text-rose-900 border border-rose-200"
+    }
+  ],
+  fofocas: [
+    {
+      title: "CHOQUEI: CANTOR SERTANEJO MAIS TOCADO DO ANO É VISTO COM NOVA MODELO EM RESTAURANTE DE SP",
+      subtitle: "Assessoria nega assessoria afetiva, mas fãs fervorosos apontam que as malas dele já estão na casa da famosa.",
+      source: "Portal Choquei",
+      image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=450&auto=format&fit=crop&q=80",
+      time: "Há 3 min",
+      badge: "FOFOCA EXCLUSIVA",
+      badgeColor: "bg-yellow-100 text-yellow-950 border border-yellow-250"
+    },
+    {
+      title: "LÉO DIAS: APRESENTADORA DE SUCESSO PREPARA CHÁ DE REVELAÇÃO EXTREMAMENTE SECRETO",
+      subtitle: "Fontes exclusivas adiantam que apenas 15 parentes íntimos viajarão para fazenda paradisíaca no interior de SP.",
+      source: "Léo Dias • Exclusivo",
+      image: "https://images.unsplash.com/photo-1596495578065-6e0763fa1178?w=450&auto=format&fit=crop&q=80",
+      time: "Há 18 min",
+      badge: "CELEBRIDADES",
+      badgeColor: "bg-fuchsia-100 text-fuchsia-950 border border-fuchsia-250"
+    },
+    {
+      title: "INFLUENCER COM 45 MILHÕES DE SEGUIDORES CHOCA REDES AO POSTAR CLOSET GIGANTE E APREENSÃO DE JOIAS",
+      subtitle: "Tour mostra itens de grifes que somam mais de R$ 3 milhões. Internautas debatem sobre ostentação saudável.",
+      source: "Fofoquei Oficial",
+      image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=450&auto=format&fit=crop&q=80",
+      time: "Há 1 hora",
+      badge: "MUNDO POP",
+      badgeColor: "bg-pink-100 text-pink-900 border border-pink-200"
+    }
+  ],
+  gospel: [
+    {
+      title: "CANTORA GOSPEL ATINGE RECORDE DE 110 MILHÕES DE STREAMINGS E LANÇA SINGLE ACÚSTICO",
+      subtitle: "A nova música em voz e piano promete se tornar o hino oficial das orações noturnas mais íntimas de 2026.",
+      source: "Pleno News Gospel",
+      image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=450&auto=format&fit=crop&q=80",
+      time: "Há 15 min",
+      badge: "LOUVOR & ADORAÇÃO",
+      badgeColor: "bg-cyan-50 text-cyan-900 border border-cyan-205"
+    },
+    {
+      title: "CONGRESSO DE FRATERNIDADE UNE MILHARES DE PESSOAS EM ESTÁDIO NO INTERIOR DE SP",
+      subtitle: "Líderes de mais de trinta igrejas consagram orações coletivas pela paz nas comunidades metropolitanas paulistas.",
+      source: "Gospel Prime",
+      image: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=450&auto=format&fit=crop&q=80",
+      time: "Há 4 horas",
+      badge: "VIGÍLIA GERAL",
+      badgeColor: "bg-sky-50 text-sky-950 border border-sky-102"
+    },
+    {
+      title: "SALA DE MULTIMÍDIA GOSPEL NO PALMARES OFERECE CURSOS GRÁTIS DE TI E EDIÇÃO DE VÍDEO",
+      subtitle: "Iniciativa voluntária de jovens cristãos já matriculou mais de 80 crianças do bairro neste mês.",
+      source: "União Divina • Social",
+      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=450&auto=format&fit=crop&q=80",
+      time: "Há 6 horas",
+      badge: "PROJETO CRISTÃO",
+      badgeColor: "bg-emerald-50 text-emerald-950 border border-emerald-100"
+    }
+  ]
+};
 
 function PassengerPhone({ 
   tvState, 
@@ -2820,17 +2970,79 @@ function PassengerPhone({
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
 
+  // Custom states for interactive items
+  const [likedArticles, setLikedArticles] = useState<Record<string, boolean>>({});
+  const [bookmarkedArticles, setBookmarkedArticles] = useState<Record<string, boolean>>({});
+  
+  // Search query
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // News active offsets to cycle articles whenever returning to a slide!
+  const [newsOffsets, setNewsOffsets] = useState<Record<string, number>>({
+    bairro: 0,
+    geral: 0,
+    esportes: 0,
+    fofocas: 0,
+    gospel: 0
+  });
+
   const slide = propSlide !== undefined ? propSlide : localSlide;
   const setSlide = propSetSlide !== undefined ? propSetSlide : setLocalSlide;
 
-  const getLineTime = (lineNumber: string) => {
-    const found = tvState.busLines?.find((b: any) => b.line.trim().toUpperCase() === lineNumber.trim().toUpperCase());
-    if (found) return found.time;
-    const hash = lineNumber.split('').reduce((accValue: number, char: string) => accValue + char.charCodeAt(0), 0);
-    const minute = ((new Date().getMinutes() + hash) % 25) + 3;
-    return `${minute} MIN`;
+  const handleSetSlide = (newSlide: string) => {
+    setSlide(newSlide);
+    setProgress(0);
   };
 
+  // Rotate category articles on slide change to guarantee always fresh content when returning to a slide!
+  useEffect(() => {
+    const categoryKey = slide.replace("news-", "");
+    if (newsOffsets[categoryKey] !== undefined) {
+      setNewsOffsets(prev => {
+        const arry = ALL_NEWS_DATABASE[categoryKey] || [];
+        const nextVal = (prev[categoryKey] + 1) % (arry.length || 1);
+        return {
+          ...prev,
+          [categoryKey]: nextVal
+        };
+      });
+    }
+  }, [slide]);
+
+  // Rotates category articles based on state offsets to ensure varied display
+  const getRotatedCategoryArticles = (cat: string): NewsArticle[] => {
+    const list = ALL_NEWS_DATABASE[cat] || [];
+    if (list.length === 0) return [];
+    const offset = newsOffsets[cat] || 0;
+    return [...list.slice(offset), ...list.slice(0, offset)];
+  };
+
+  // Get current active articles to render based on selection filter
+  const getActiveFeedArticles = (): NewsArticle[] => {
+    if (slide === "weather") {
+      const bArticles = getRotatedCategoryArticles("bairro");
+      const gArticles = getRotatedCategoryArticles("geral");
+      const eArticles = getRotatedCategoryArticles("esportes");
+      const fArticles = getRotatedCategoryArticles("fofocas");
+      const goArticles = getRotatedCategoryArticles("gospel");
+      
+      const merged: NewsArticle[] = [];
+      const maxLength = Math.max(bArticles.length, gArticles.length, eArticles.length, fArticles.length, goArticles.length);
+      for (let i = 0; i < maxLength; i++) {
+        if (bArticles[i]) merged.push(bArticles[i]);
+        if (gArticles[i]) merged.push(gArticles[i]);
+        if (eArticles[i]) merged.push(eArticles[i]);
+        if (fArticles[i]) merged.push(fArticles[i]);
+        if (goArticles[i]) merged.push(goArticles[i]);
+      }
+      return merged;
+    }
+
+    const catKey = slide.replace("news-", "");
+    return getRotatedCategoryArticles(catKey);
+  };
+
+  // Autoplay sequence logic
   useEffect(() => {
     if (!isAutoplay) {
       setProgress(0);
@@ -2838,7 +3050,7 @@ function PassengerPhone({
     }
 
     const stepMs = 100;
-    const durationMs = 8000; // 8 seconds per screen to allow reading news article and routes list
+    const durationMs = 8000; // 8 seconds per slide
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -2854,107 +3066,97 @@ function PassengerPhone({
     return () => clearInterval(interval);
   }, [isAutoplay, slide, setSlide]);
 
-  const handleSetSlide = (newSlide: string) => {
-    setSlide(newSlide);
-    setProgress(0);
-  };
-
-  // Extracts current temperature integer
   const currTemp = parseInt(tvState.temperature) || 17;
   const sensation = currTemp - 1;
-
-  // Extra clock strings for top of screen (hh:mm format)
   const clockShort = timeState ? timeState.substring(0, 5) : "11:05";
 
+  // Filter feed by search query
+  const rawArticles = getActiveFeedArticles();
+  const filteredArticles = rawArticles.filter(art => {
+    if (!searchQuery) return true;
+    const term = searchQuery.toLowerCase();
+    return art.title.toLowerCase().includes(term) || 
+           art.subtitle.toLowerCase().includes(term) || 
+           art.source.toLowerCase().includes(term);
+  });
+
   return (
-    <div className="w-full bg-[#0d1612] text-emerald-100 rounded-[2.8rem] border-[8px] border-[#162a22] p-3 shadow-[0_25px_50px_rgba(0,0,0,0.85)] relative select-none font-sans">
+    <div className="w-full bg-[#1e222b] text-[#f1f3f4] rounded-[2.8rem] border-[8px] border-[#2d323f] p-3 shadow-[0_25px_50px_rgba(0,0,0,0.85)] relative select-none font-sans">
       {/* Notch screen */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-4 bg-[#162a22] rounded-b-xl z-20 flex justify-center items-[flex-start]">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-4 bg-[#2d323f] rounded-b-xl z-20 flex justify-center items-center">
         <div className="w-8 h-0.5 bg-stone-950 rounded-full mt-1" />
       </div>
 
-      {/* Screen Wrapper with animated transition and background image */}
+      {/* Screen Wrapper with Google Discover theme */}
       <div 
-        className="relative rounded-[2rem] min-h-[500px] flex flex-col justify-between overflow-hidden transition-all duration-700 bg-cover bg-center"
-        style={{ 
-          background: slide === "weather" 
-            ? "linear-gradient(to bottom, #032517, #010f09)" 
-            : "#f4f6f9"
-        }}
+        className="relative rounded-[2rem] min-h-[500px] flex flex-col justify-between overflow-hidden transition-all duration-300 bg-[#f1f3f4]"
       >
-        {/* Futuristic circuit overlay for cyber styling */}
-        {slide === "weather" && (
-          <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none z-0" />
-        )}
-        
-        {/* Glow corner highlights */}
-        {slide === "weather" && (
-          <>
-            <div className="absolute -top-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-          </>
-        )}
 
         {/* Dynamic header of the phone */}
-        <div className={`pt-4 px-4 z-10 flex justify-between items-center text-[9px] font-mono font-bold mb-2 transition-colors duration-300 ${
-          slide === "weather" ? "text-emerald-400 drop-shadow-md" : "text-stone-700"
-        }`}>
-          <span className={`tracking-widest border px-1.5 py-0.5 rounded text-[8.5px] transition-colors duration-300 ${
-            slide === "weather" ? "bg-emerald-950/80 border-emerald-500/20 text-emerald-400" : "bg-stone-200 border-stone-300 text-stone-700"
-          }`}>SINAL OK</span>
+        <div className="pt-4 px-4 z-10 flex justify-between items-center text-[9px] font-mono font-bold text-stone-700 mb-2 select-none">
+          <span className="tracking-widest border px-1.5 py-0.5 rounded text-[8.5px] bg-stone-205 border-stone-300">
+            {clockShort}
+          </span>
           <div className="flex items-center gap-1.5">
             {/* Wifi Inline Icon */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`w-3.5 h-3.5 inline-block transition-colors duration-300 ${
-              slide === "weather" ? "text-emerald-400" : "text-stone-500"
-            }`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 inline-block text-stone-600">
               <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className={`text-[7.5px] tracking-tighter border font-extrabold rounded px-1 scale-90 transition-colors duration-300 ${
-              slide === "weather" ? "bg-emerald-950 border-emerald-500/25 text-emerald-400" : "bg-stone-250 border-stone-300 text-stone-701"
-            }`}>5G_STABLE</span>
-            {/* Battery Indicator with 94% */}
-            <div className={`h-3 w-[22px] border rounded-xs flex items-center p-0.5 relative gap-[1.5px] transition-colors duration-300 ${
-              slide === "weather" ? "border-emerald-500/40" : "border-stone-400"
-            }`}>
-              <div className={`h-full w-[94%] rounded-3xs transition-colors duration-300 ${
-                slide === "weather" ? "bg-emerald-400" : "bg-stone-600"
-              }`} />
-              <div className={`absolute right-[0.5px] top-[4px] w-[1px] h-[3px] transition-colors duration-300 ${
-                slide === "weather" ? "bg-emerald-500/60" : "bg-stone-400"
-              }`} />
-              <span className={`absolute inset-0 text-[6px] font-sans flex items-center justify-center font-extrabold scale-[0.8] transition-colors duration-300 ${
-                slide === "weather" ? "text-white" : "text-stone-800"
-              }`}>94</span>
+            <span className="text-[7.5px] tracking-tighter border font-extrabold rounded px-1 scale-90 bg-stone-205 border-stone-300">
+              4G_PLUS
+            </span>
+            {/* Battery Indicator with 98% */}
+            <div className="h-3 w-[22px] border rounded-xs flex items-center p-0.5 relative gap-[1.5px] border-stone-400">
+              <div className="h-full w-[98%] rounded-3xs bg-emerald-600" />
+              <div className="absolute right-[0.5px] top-[4px] w-[1px] h-[3px] bg-stone-400" />
+              <span className="absolute inset-0 text-[6px] font-sans flex items-center justify-center font-extrabold scale-[0.8] text-white font-black">98</span>
             </div>
           </div>
         </div>
 
-        {/* INTEGRATED TABS SELECTOR - Scrollable and highly professional */}
-        <div className="z-10 px-2 pb-1 shrink-0">
+        {/* GOOGLE CHROME SEARCH BAR */}
+        <div className="px-3 py-1 bg-[#f1f3f4] z-10 shrink-0 select-none">
+          <div className="bg-white rounded-full px-3.5 py-2 flex items-center gap-2 shadow-3xs border border-stone-200 transition-all hover:shadow-xs">
+            {/* Beautiful G Icon banner */}
+            <div className="w-5 h-5 flex items-center justify-center mr-0.5 select-none font-black font-sans shrink-0 bg-stone-100 rounded-full text-xs">
+              <span className="text-blue-500">G</span>
+              <span className="text-red-500 text-[10px] scale-90">o</span>
+              <span className="text-yellow-500 text-[10px] scale-90 font-bold">o</span>
+            </div>
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Pesquisar notícias de Osasco..." 
+              className="w-full bg-transparent border-none text-stone-800 text-[11px] font-bold outline-none focus:ring-0 placeholder-stone-400 font-sans"
+            />
+            <span className="text-[11px] text-stone-400 shrink-0">🔍</span>
+          </div>
+        </div>
+
+        {/* PILLS CATEGORIES TABS */}
+        <div className="z-10 px-2 pb-1 shrink-0 bg-[#f1f3f4] select-none">
           <div className="flex overflow-x-auto whitespace-nowrap gap-1 py-1.5 px-0.5 scrollbar-none scroll-smooth">
             {SLIDES_SEQUENCE.map((s) => {
               let label = "";
               let icon = "";
               let accentColor = "";
-              if (s === "weather") { label = "Clima"; icon = "☀️"; accentColor = "text-amber-500"; }
-              else if (s === "bus-035") { label = "035"; icon = "🚌"; accentColor = "text-yellow-500"; }
-              else if (s === "bus-034") { label = "034"; icon = "🚌"; accentColor = "text-blue-500"; }
-              else if (s === "bus-466x1") { label = "466X1"; icon = "🚌"; accentColor = "text-purple-500"; }
-              else if (s === "news-g1") { label = "G1"; icon = "📰"; accentColor = "text-red-500"; }
-              else if (s === "news-ge") { label = "GE"; icon = "⚽"; accentColor = "text-emerald-500"; }
-              else if (s === "news-cnn") { label = "CNN"; icon = "📺"; accentColor = "text-red-650"; }
+              if (s === "weather") { label = "Início/Clima"; icon = "✨"; accentColor = "text-amber-500"; }
+              else if (s === "news-bairro") { label = "Bairro"; icon = "🏡"; accentColor = "text-emerald-500"; }
+              else if (s === "news-geral") { label = "Portais"; icon = "📰"; accentColor = "text-indigo-500"; }
+              else if (s === "news-esportes") { label = "Esportes"; icon = "⚽"; accentColor = "text-emerald-600"; }
+              else if (s === "news-fofocas") { label = "Fofocas"; icon = "🔥"; accentColor = "text-red-500"; }
+              else if (s === "news-gospel") { label = "Gospel"; icon = "🙌"; accentColor = "text-amber-600"; }
 
               const isActive = slide === s;
               return (
                 <button
                   key={s}
                   onClick={() => handleSetSlide(s)}
-                  className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tight flex items-center gap-1 shrink-0 select-none transition-all duration-150 active:scale-95 border ${
+                  className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tight flex items-center gap-1 shrink-0 select-none transition-all duration-150 active:scale-95 border ${
                     isActive
                       ? "bg-slate-900 border-slate-950 text-white shadow-md font-bold scale-[1.03]"
-                      : slide === "weather"
-                        ? "bg-emerald-950/80 border-emerald-900/40 text-emerald-350 hover:bg-emerald-900/60"
-                        : "bg-white border-stone-200 text-stone-600 shadow-3xs hover:bg-stone-50"
+                      : "bg-white border-stone-205 text-stone-600 hover:bg-stone-55"
                   }`}
                 >
                   <span className={`${accentColor} text-[10px]`}>{icon}</span>
@@ -2966,93 +3168,31 @@ function PassengerPhone({
         </div>
 
         {/* COMPONENT BODY */}
-        <div className="flex-grow z-10 overflow-y-auto max-h-[355px] scrollbar-none relative min-h-[350px]">
+        <div className="flex-grow z-10 overflow-y-auto max-h-[360px] h-[355px] scrollbar-none relative bg-[#f1f3f4] p-3 pt-1 flex flex-col gap-3">
           <AnimatePresence mode="wait" initial={false}>
             {slide === "weather" && (
               <motion.div
-                key="weather"
-                initial={{ x: 120, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -120, opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex flex-col justify-between text-center h-full flex-grow py-1 px-3"
+                key="weather-block"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="bg-gradient-to-br from-[#0a2342] to-[#123c69] border border-blue-900 rounded-2xl p-3.5 text-white shadow-md flex flex-col gap-2 relative overflow-hidden shrink-0 select-none text-left"
               >
-                {/* Header Labeling */}
-                <div className="text-center font-mono animate-fade-in mt-1">
-                  <span className="text-[9px] font-bold tracking-[0.25em] text-emerald-400 uppercase bg-[#061f14] border border-[#10b981]/30 py-0.5 px-3 rounded-full inline-block mb-1 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
-                    TEMPO:
-                  </span>
-                  
-                  {/* Big Temperature Display style from Screenshot 1 */}
-                  <div className="relative my-2">
-                    <span className="text-5xl font-display font-bold tracking-tighter text-white block drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
-                      {currTemp}°C
-                    </span>
+                {/* Decorative glow */}
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
+                
+                <div className="flex justify-between items-center leading-none">
+                  <div>
+                    <span className="text-[7.5px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none block">Clima Atual • Osasco</span>
+                    <span className="text-3xl font-display font-black tracking-tighter mt-1 block">{currTemp}°C</span>
                   </div>
+                  <div className="text-3xl animate-bounce">🌦️</div>
                 </div>
 
-                {/* Central Glowing Weather Icon illustration */}
-                <div className="my-1 flex flex-col items-center justify-center relative">
-                  <div className="absolute w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
-                  
-                  {/* Custom stylized high contrast Sun and Cloud Rain SVG bundle resembling Screenshot 1 */}
-                  <div className="relative w-20 h-20 flex items-center justify-center animate-pulse duration-[3000ms]">
-                    {/* Glowing sun behind */}
-                    <div className="absolute -top-1 -right-1 w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.65)] border border-yellow-300 opacity-90 animate-spin duration-[15000ms]" />
-                    
-                    {/* Intricate cloud */}
-                    <div className="absolute w-14 h-9 bg-gradient-to-b from-stone-100 to-stone-300 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] border border-white/60 z-10 flex items-center justify-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-stone-300 absolute left-3 top-3" />
-                    </div>
-                    
-                    {/* Rain drops falling */}
-                    <div className="absolute bottom-1 left-5 flex gap-2 z-20">
-                      <span className="w-[1.8px] h-3 bg-cyan-400 rounded-full transform rotate-12 animate-bounce shadow-sm" />
-                      <span className="w-[1.8px] h-3.5 bg-emerald-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.2s] shadow-sm" />
-                      <span className="w-[1.8px] h-3 bg-cyan-400 rounded-full transform rotate-12 animate-bounce [animation-delay:0.4s] shadow-sm" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weather Category text - matching "NUVENS E CHUVA" */}
-                <div className="mb-1 font-mono text-center">
-                  <h2 className="text-md font-black tracking-wider text-emerald-400 uppercase drop-shadow">
-                    NUVENS E CHUVA
-                  </h2>
-                  <p className="text-[8.5px] text-stone-300 uppercase tracking-widest mt-0.5 font-bold">
-                    {tvState.temperature.includes("Chuv") || tvState.temperature.includes("chuv") ? "NUBRADO E CHUVOSO" : "NUBRADO PARCIALMENTE"}
-                  </p>
-                </div>
-
-                {/* Custom matrix sensor metrics ticker bar from the physical phone mockup */}
-                <div className="bg-[#031c11]/85 border border-emerald-500/20 rounded-xl p-2 text-left shadow-md">
-                  <div className="grid grid-cols-2 gap-1 text-[7.5px] font-mono text-stone-300">
-                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1">
-                      <span>UMIDADE:</span>
-                      <span className="text-emerald-400 font-extrabold">85%</span>
-                    </div>
-                    <div className="flex items-center justify-between pl-1">
-                      <span>VENTO:</span>
-                      <span className="text-emerald-400 font-extrabold">12 KM/H</span>
-                    </div>
-                    <div className="flex items-center justify-between border-r border-[#10b981]/15 pr-1 pt-0.5">
-                      <span>SENSACAO:</span>
-                      <span className="text-emerald-400 font-extrabold">{sensation}°C</span>
-                    </div>
-                    <div className="flex items-center justify-between pl-1 pt-0.5">
-                      <span>CIDADE:</span>
-                      <span className="text-yellow-405 font-extrabold">OSASCO-SP</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Weather Card */}
-                <div className="bg-[#03150d] border border-emerald-500/10 rounded-xl p-1.5 flex items-start mt-1.5 gap-1 select-none text-[8px]">
-                  <div className="text-blue-300 text-xs shrink-0 select-none">⭐</div>
-                  <div className="flex-grow text-left leading-tight">
-                    <p className="text-[7.5px] font-mono text-slate-300 font-bold uppercase tracking-widest leading-none mb-0.5 shadow-sm">ALERTAS COLETIVOS</p>
-                    <p className="text-[9px] text-white leading-normal font-sans font-medium">{tvState.temperature ? tvState.temperature : "Dia nublado com possibilidade de chuva leve"}</p>
-                  </div>
+                <div className="flex justify-between items-center text-[8.5px] font-mono text-stone-200 border-t border-white/10 pt-2 mt-1">
+                  <span>Sensação: {sensation}°C</span>
+                  <span className="text-emerald-400 font-bold">Nuvens e Chuva</span>
+                  <span>Umid.: 85%</span>
                 </div>
               </motion.div>
             )}
