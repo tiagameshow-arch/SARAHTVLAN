@@ -132,10 +132,17 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           onStateChange: (event: any) => {
             if (active && event.data === 0) {
               onEnded();
-              // Prevent stopping if there is only 1 video or if the index transition is silent
-              try {
-                event.target.playVideo();
-              } catch (err) {}
+              // Prevent stopping if there is only 1 video on the playlist (delay and check if component stayed active with same video)
+              setTimeout(() => {
+                if (active && playerRef.current) {
+                  try {
+                    const state = playerRef.current.getPlayerState();
+                    if (state === 0 || state === -1) {
+                      playerRef.current.playVideo();
+                    }
+                  } catch (err) {}
+                }
+              }, 400);
             }
           },
           onError: (event: any) => {
@@ -772,6 +779,7 @@ export default function App() {
 
   // Keep a mutable ref of the state so the SSE/EventSource useEffect doesn't have to keep reconnecting on state changes
   const tvStateRef = useRef<TVState>(tvState);
+  const lastMutationRef = useRef<number>(0);
   useEffect(() => {
     tvStateRef.current = tvState;
   }, [tvState]);
@@ -793,6 +801,10 @@ export default function App() {
       
       eventSource.onmessage = (event) => {
         try {
+          if (Date.now() - lastMutationRef.current < 2500) {
+            // Safe lock to prevent server SSE race updates from rolling back quick user interactions
+            return;
+          }
           const liveData = JSON.parse(event.data) as TVState;
           setTvState(liveData);
           saveLocalFallback(liveData);
@@ -976,6 +988,7 @@ export default function App() {
     };
     
     // Optimistic update for beautiful instantaneous tactile response
+    lastMutationRef.current = Date.now();
     setTvState(nextState);
     tvStateRef.current = nextState; // Synchronous ref update to prevent race conditions during rapid clicks!
     saveLocalFallback(nextState);
@@ -1125,6 +1138,7 @@ export default function App() {
     };
 
     // Optimistically update locally so it performs beautifully immediately
+    lastMutationRef.current = Date.now();
     setTvState(localNextState);
     saveLocalFallback(localNextState);
 

@@ -68,19 +68,19 @@ function loadStateFromDisk(): TVState {
 
   // Pure clean default state with only 1 main terminal monitor to avoid cluttering and unwanted default screens
   return {
-    temperature: "17°C - Nublado",
-    newsTicker: "NOTÍCIAS DE OSASCO: Novas melhorias de asfalto e sinalização chegam à Avenida Zumbi dos Palmares, no Parque Palmares! Linhas de ônibus integradas conectam o bairro ao centro de Osasco e estações de trem.",
+    temperature: "20°C - Céu Limpo",
+    newsTicker: "GIRO SP: Novas linhas de ônibus integradas e asfalto reforçado na Avenida Zumbi dos Palmares melhoram a mobilidade no Parque Palmares.",
     busLines: [
-      { id: "1", line: "035", time: "7 MIN" },
-      { id: "2", line: "034", time: "15 MIN" },
-      { id: "3", line: "466", time: "30 MIN" }
+      { id: "1", line: "038", time: "CARREGANDO..." },
+      { id: "2", line: "194", time: "CARREGANDO..." },
+      { id: "3", line: "466EX1", time: "CARREGANDO..." }
     ],
     monitors: [
       {
         id: "terminal-principal",
         name: "Monitor Principal - Terminal",
         location: "Terminal Central",
-        customBusLines: "035/034/466",
+        customBusLines: "038/194/466EX1",
         playlist: ["ysz5S6PUM-U", "S_dfq9rFWAE", "5gK9m6W-i8E"],
         currentVideoIndex: 0,
         isPlaying: true,
@@ -112,70 +112,226 @@ function broadcastState() {
   });
 }
 
-// Background scheduler for AUTOMATORY (News, Weather, Time, and Bus times)
-function updateBusTimes() {
-  let changed = false;
-  tvState.busLines = tvState.busLines.map(bus => {
-    const match = bus.time.match(/^(\d+)/);
-    if (match) {
-      const currentMins = parseInt(match[1], 10);
-      if (currentMins > 1) {
-        changed = true;
-        return { ...bus, time: `${currentMins - 1} MIN` };
-      } else if (currentMins === 1) {
-        changed = true;
-        return { ...bus, time: "PARTIU" };
-      }
-    } else if (bus.time === "PARTIU") {
-      changed = true;
-      // Roll a new random time (e.g. between 8 and 30 mins)
-      const nextMins = Math.floor(Math.random() * 22) + 8;
-      return { ...bus, time: `${nextMins} MIN` };
-    }
-    return bus;
-  });
-  
-  if (changed) {
-    tvState.updatedAt = new Date().toISOString();
-    broadcastState();
+// Real Timetables from Uploaded Images
+const BUS_SCHEDULES: Record<string, { weekday: string[]; saturday: string[]; sunday: string[] }> = {
+  "038": {
+    weekday: ["04:25", "04:45", "05:10", "05:30", "05:45", "06:10", "06:35", "07:00", "07:45", "08:30", "09:10", "09:55", "10:45", "11:30", "12:25", "13:10", "13:40", "14:15", "14:50", "15:20", "15:55", "16:30", "17:05", "17:50", "18:35", "19:20", "20:05", "20:55", "21:35", "22:25", "23:15"],
+    saturday: ["04:35", "05:05", "05:40", "06:15", "06:55", "07:30", "08:15", "08:50", "09:20", "09:45", "10:20", "11:20", "12:20", "13:05", "13:55", "14:25", "15:00", "15:35", "16:00", "16:35", "17:10", "17:45", "18:35", "19:35", "21:10", "22:30"],
+    sunday: ["05:00", "06:10", "07:25", "08:40", "10:05", "12:20", "13:50", "15:15", "16:40", "18:00", "19:20", "21:35", "22:50"]
+  },
+  "194": {
+    weekday: ["05:05", "05:15", "05:35", "05:45", "06:00", "19:45", "20:15", "20:25", "20:35", "20:45", "20:55", "21:15", "22:40"],
+    saturday: ["05:00", "05:10", "08:00", "15:25"],
+    sunday: ["05:00", "07:00", "21:35"]
+  },
+  "466EX1": {
+    weekday: ["05:33", "06:15", "07:15", "07:55", "09:00", "09:50", "10:45", "11:30", "12:50", "13:55", "14:35", "15:20", "16:05", "18:05", "19:20", "20:30", "22:00"],
+    saturday: [],
+    sunday: []
   }
-}
+};
 
 const weatherPresets = [
-  "17°C - Chuva Leve",
+  "20°C - Céu Limpo",
   "18°C - Nublado",
-  "19°C - Garoando",
-  "21°C - Céu Limpo",
   "22°C - Ensolarado",
-  "16°C - Névoa",
-  "15°C - Nublado",
-  "14°C - Chuviscando"
+  "16°C - Garoando",
+  "15°C - Chuva Leve",
+  "17°C - Parcialmente Nublado"
 ];
 
 const newsPresets = [
-  "NOTÍCIAS DE OSASCO: Novas rotas de ônibus e asfalto reforçado na Avenida Zumbi dos Palmares melhoram a mobilidade no Parque Palmares.",
-  "ESPORTES EM OSASCO: Time de vôlei feminino Osasco São Cristóvão Saúde treina forte para a disputa dos playoffs com ingressos esgotados no Liberatti.",
-  "FUTEBOL OSASCO: Clubes do futebol amador do Parque Palmares definem a tabela para o torneio regional deste final de semana.",
-  "ESPORTES E SAÚDE: Ciclovia da Avenida Bussocaba em Osasco recebe evento esportivo de ciclismo infantil e corrida neste domingo.",
-  "MELHORIAS URBANAS: Prefeitura de Osasco confirma novas câmeras de monitoramento e iluminação LED na região do Parque Palmares.",
-  "ESPORTES - PALMEIRAS: Alviverde treina forte visando o clássico contra o São Paulo FC no final de semana pelo Brasileirão.",
-  "ESPORTES - SÃO PAULO FC: Tricolor paulista anuncia retorno de lesionados para o treino tático focado na Libertadores.",
-  "ESPORTES - CORINTHIANS: Alvinegro finaliza preparação com portões fechados e deve ter novidades no time titular para o próximo jogo.",
-  "ESPORTES - SANTOS: Peixe foca na Vila Belmiro buscando manter 100% de aproveitamento em casa no campeonato nacional.",
-  "FUTEBOL INTERNACIONAL: Seleção Brasileira se mobiliza na preparação para os jogos das Eliminatórias com força total.",
-  "FÓRMULA 1: Grid se prepara para o GP de São Paulo em Interlagos com expectativa de arquibancadas lotadas e pista sob forte calor.",
-  "BASQUETE - NBB: Osasco Basquete intensifica treinos físicos visando subir na tabela de classificação geral do torneio."
+  "GIRO SP: Nova frota de ônibus com ar condicionado começa a circular nesta semana na Região Metropolitana.",
+  "DISTRITO OSASCO: Novas rotas de asfalto e sinalização melhoram o tráfego de pedestres e veículos.",
+  "CORINTHIANS: Alvinegro treina forte visando o clássico deste final de semana no campeonato paulista.",
+  "SÃO PAULO FC: Tricolor finaliza preparação com volta de titulares lesionados para o jogo da Libertadores.",
+  "PALMEIRAS: Verdão intensifica trabalhos táticos em busca de manter a liderança isolada.",
+  "SANTOS: Peixe foca na Vila Belmiro para o próximo duelo do torneio nacional."
 ];
 
-function updateWeatherAndNews() {
-  const randomWeatherIdx = Math.floor(Math.random() * weatherPresets.length);
-  tvState.temperature = weatherPresets[randomWeatherIdx];
+// Helper to convert time to America/Sao_Paulo timezone
+function getOsascoTime() {
+  const dateStr = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+  const localDate = new Date(dateStr);
+  const hour = localDate.getHours();
+  const minute = localDate.getMinutes();
+  const dayOfWeek = localDate.getDay(); // 0 = Sunday, 1-5 = Weekday, 6 = Saturday
+  return { hour, minute, dayOfWeek };
+}
+
+function parseTimeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function getNextBusTime(lineKey: string): string {
+  const scheduleDef = BUS_SCHEDULES[lineKey];
+  if (!scheduleDef) return "SEM INFO";
   
-  const randomNewsIdx = Math.floor(Math.random() * newsPresets.length);
-  tvState.newsTicker = newsPresets[randomNewsIdx];
+  const { hour, minute, dayOfWeek } = getOsascoTime();
+  const osascoMinutesNow = hour * 60 + minute;
   
+  let schedule: string[] = [];
+  if (dayOfWeek === 0) {
+    schedule = scheduleDef.sunday;
+  } else if (dayOfWeek === 6) {
+    schedule = scheduleDef.saturday;
+  } else {
+    schedule = scheduleDef.weekday;
+  }
+  
+  if (schedule.length === 0) {
+    return "NÃO OPERA HOJE";
+  }
+  
+  // Find trips today
+  const upcoming = schedule
+    .map(timeStr => ({ timeStr, mins: parseTimeToMinutes(timeStr) }))
+    .filter(item => item.mins >= osascoMinutesNow)
+    .sort((a, b) => a.mins - b.mins);
+    
+  if (upcoming.length > 0) {
+    const diff = upcoming[0].mins - osascoMinutesNow;
+    if (diff === 0) return "PARTIU";
+    return `${diff} MIN`;
+  }
+  
+  // Tomorrow's first trip (wrap-around)
+  let tomorrowSchedule: string[] = [];
+  const tomorrowDayOfWeek = (dayOfWeek + 1) % 7;
+  if (tomorrowDayOfWeek === 0) {
+    tomorrowSchedule = scheduleDef.sunday;
+  } else if (tomorrowDayOfWeek === 6) {
+    tomorrowSchedule = scheduleDef.saturday;
+  } else {
+    tomorrowSchedule = scheduleDef.weekday;
+  }
+  
+  if (tomorrowSchedule.length > 0) {
+    const firstMins = parseTimeToMinutes(tomorrowSchedule[0]);
+    const diff = (1440 - osascoMinutesNow) + firstMins;
+    return `${diff} MIN`;
+  }
+  
+  return "SEM MAIS VIAGENS";
+}
+
+function getLineTimer(lineNumber: string): string {
+  const cleanLine = lineNumber.trim().toUpperCase();
+  if (cleanLine === "038" || cleanLine === "38") {
+    return getNextBusTime("038");
+  }
+  if (cleanLine === "194") {
+    return getNextBusTime("194");
+  }
+  if (cleanLine === "466EX1" || cleanLine === "466") {
+    return getNextBusTime("466EX1");
+  }
+  
+  // Dynamic calculation for other lines
+  const hash = cleanLine.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const { minute } = getOsascoTime();
+  const calc = ((minute + hash) % 25) + 3;
+  return `${calc} MIN`;
+}
+
+// Background scheduler for AUTOMATORY (News, Weather, Time, and Bus times)
+function computeNextBusTimes() {
+  tvState.busLines = tvState.busLines.map(bus => {
+    return { ...bus, time: getLineTimer(bus.line) };
+  });
+}
+
+function updateBusTimes() {
+  computeNextBusTimes();
   tvState.updatedAt = new Date().toISOString();
   broadcastState();
+}
+
+function mapWeatherCode(code: number): string {
+  if (code === 0) return "Céu Limpo";
+  if (code >= 1 && code <= 3) return "Nublado";
+  if (code === 45 || code === 48) return "Névoa / Nevoeiro";
+  if (code >= 51 && code <= 55) return "Chuviscando";
+  if (code >= 61 && code <= 65) return "Chuva Moderada";
+  if (code >= 80 && code <= 82) return "Pancadas de Chuva";
+  if (code >= 95) return "Tempestade";
+  return "Parcialmente Nublado";
+}
+
+async function fetchOsascoWeather(): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(
+      "https://api.open-meteo.com/v1/forecast?latitude=-23.5329&longitude=-46.7917&current=temperature_2m,weather_code&timezone=America/Sao_Paulo",
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+    if (response.ok) {
+      const data: any = await response.json();
+      if (data && data.current) {
+        const temp = Math.round(data.current.temperature_2m);
+        const code = data.current.weather_code;
+        return `${temp}°C - ${mapWeatherCode(code)}`;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[Weather Scheduler] Falha ao consultar Open-Meteo:", err.message || err);
+  }
+  return weatherPresets[Math.floor(Math.random() * weatherPresets.length)];
+}
+
+async function fetchLiveNews(): Promise<string[]> {
+  const feeds = [
+    "https://g1.globo.com/rss/g1/sao-paulo/",
+    "https://g1.globo.com/rss/g1/esportes/"
+  ];
+  const items: string[] = [];
+  for (const url of feeds) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const text = await response.text();
+        const titles = [...text.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>/g)].map(match => match[1].trim());
+        const fallbackTitles = titles.length > 0 ? titles : [...text.matchAll(/<title>(.*?)<\/title>/g)].map(match => match[1].trim());
+        
+        const filtered = fallbackTitles
+          .filter(t => t && t !== "g1 > São Paulo" && t !== "g1 > Esportes" && !t.includes("G1") && !t.includes("g1"))
+          .map(t => t.replace(/<[^>]*>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim());
+        items.push(...filtered.slice(0, 6));
+      }
+    } catch (err: any) {
+      console.warn(`[News Scheduler] Falha ao carregar RSS de ${url}:`, err.message || err);
+    }
+  }
+  return items;
+}
+
+// Background buffer memory for current news list
+let rotatingNewsList: string[] = [...newsPresets];
+
+async function updateWeatherAndNews() {
+  try {
+    const weather = await fetchOsascoWeather();
+    tvState.temperature = weather;
+
+    const liveTitles = await fetchLiveNews();
+    if (liveTitles && liveTitles.length > 0) {
+      rotatingNewsList = liveTitles;
+    }
+
+    if (rotatingNewsList.length > 0) {
+      const randNews = rotatingNewsList[Math.floor(Math.random() * rotatingNewsList.length)];
+      tvState.newsTicker = randNews.toUpperCase();
+    }
+    
+    tvState.updatedAt = new Date().toISOString();
+    broadcastState();
+  } catch (err) {}
 }
 
 async function startServer() {
@@ -281,7 +437,7 @@ async function startServer() {
         id,
         name: name || `Monitor ${id.toUpperCase()}`,
         location: id === "terminal-principal" ? "Terminal Central" : "Avenida Zumbi dos Palmares",
-        customBusLines: id === "terminal-principal" ? "035/034/466" : "035/034/461X1",
+        customBusLines: id === "terminal-principal" ? "038/194/466EX1" : "038/194/466EX1",
         playlist: initialPlaylist,
         currentVideoIndex: 0,
         isPlaying: true,
@@ -340,10 +496,16 @@ async function startServer() {
   });
 
   // Start automation intervals inside Express server
-  // Update bus schedules counting down every 60 seconds
-  const busInterval = setInterval(updateBusTimes, 60000);
-  // Periodically fluctuate weather and rotate news items every 180 seconds
-  const weatherNewsInterval = setInterval(updateWeatherAndNews, 180000);
+  // Update bus schedules dynamically every 15 seconds to reflect the correct real clock timer countdown
+  const busInterval = setInterval(updateBusTimes, 15000);
+  // Periodically fluctuate weather and rotate news items every 90 seconds
+  const weatherNewsInterval = setInterval(updateWeatherAndNews, 90000);
+
+  // Instantly pull news and calculate correct timetables on boot
+  setTimeout(() => {
+    updateWeatherAndNews().catch(() => {});
+    updateBusTimes();
+  }, 1000);
 
   // Connection manager: Safe tracking of monitor online status without deleting screens or wiping playlists!
   const presenceInterval = setInterval(() => {
