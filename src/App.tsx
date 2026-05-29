@@ -95,8 +95,8 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
           fs: 0,
           disablekb: 1,
           playsinline: 1,
-          loop: 1,
-          playlist: videoId, // Required by YouTube API to enable the native loop command
+          origin: window.location.origin,
+          enablejsapi: 1,
         },
         events: {
           onReady: (event: any) => {
@@ -977,6 +977,7 @@ export default function App() {
     
     // Optimistic update for beautiful instantaneous tactile response
     setTvState(nextState);
+    tvStateRef.current = nextState; // Synchronous ref update to prevent race conditions during rapid clicks!
     saveLocalFallback(nextState);
 
     try {
@@ -991,6 +992,7 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         setTvState(data.state);
+        tvStateRef.current = data.state; // Update with the latest resolved server state!
         saveLocalFallback(data.state);
         setIsOfflineMode(false);
       } else {
@@ -1157,7 +1159,7 @@ export default function App() {
     if (!videoUrlOrId.trim()) return;
     const vidId = getCleanedId(videoUrlOrId);
     
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         const nextPlaylist = [...m.playlist, vidId];
         return {
@@ -1174,7 +1176,7 @@ export default function App() {
   };
 
   const handleDeleteVideo = (monitorId: string, videoIndex: number) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         const nextPlaylist = m.playlist.filter((_, idx) => idx !== videoIndex);
         let nextIdx = m.currentVideoIndex;
@@ -1193,7 +1195,7 @@ export default function App() {
   };
 
   const handleMoveVideo = (monitorId: string, index: number, direction: "up" | "down") => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         const nextPlaylist = [...m.playlist];
         const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -1222,7 +1224,7 @@ export default function App() {
   };
 
   const handleNextVideo = (monitorId: string) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId && m.playlist.length > 0) {
         return {
           ...m,
@@ -1235,7 +1237,7 @@ export default function App() {
   };
 
   const handlePrevVideo = (monitorId: string) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId && m.playlist.length > 0) {
         return {
           ...m,
@@ -1248,7 +1250,7 @@ export default function App() {
   };
 
   const handleSelectActiveVideo = (monitorId: string, index: number) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return {
           ...m,
@@ -1261,7 +1263,7 @@ export default function App() {
   };
 
   const handleTogglePlay = (monitorId: string) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return { ...m, isPlaying: !m.isPlaying };
       }
@@ -1271,7 +1273,7 @@ export default function App() {
   };
 
   const handleToggleMute = (monitorId: string) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return { ...m, mute: !m.mute };
       }
@@ -1281,7 +1283,7 @@ export default function App() {
   };
 
   const handleToggleOrientation = (monitorId: string) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return { ...m, orientation: m.orientation === "portrait" ? "landscape" : "portrait" };
       }
@@ -1291,7 +1293,7 @@ export default function App() {
   };
 
   const handleRemoteForceRefresh = (monitorId: string) => {
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return { ...m, forceRefreshTime: new Date().toISOString() };
       }
@@ -1312,18 +1314,18 @@ export default function App() {
       isPlaying: true,
       mute: false
     };
-    const updatedMonitors = [...tvState.monitors, newMonitor];
+    const updatedMonitors = [...tvStateRef.current.monitors, newMonitor];
     setNewMonitorNameInput("");
     setSelectedMonitorId(newId);
     syncMonitorsToServer(updatedMonitors);
   };
 
   const handleDeleteMonitor = (monitorId: string) => {
-    if (tvState.monitors.length <= 1) {
+    if (tvStateRef.current.monitors.length <= 1) {
       alert("Você precisa manter pelo menos um monitor ativo no terminal!");
       return;
     }
-    const updatedMonitors = tvState.monitors.filter(m => m.id !== monitorId);
+    const updatedMonitors = tvStateRef.current.monitors.filter(m => m.id !== monitorId);
     if (selectedMonitorId === monitorId) {
       setSelectedMonitorId(updatedMonitors[0].id);
     }
@@ -1332,7 +1334,7 @@ export default function App() {
 
   const handleUpdateMonitorDetails = (monitorId: string, newName: string, newLocation: string, newBusLines: string) => {
     if (!newName.trim()) return;
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return {
           ...m,
@@ -1348,7 +1350,7 @@ export default function App() {
 
   const handleRenameMonitor = (monitorId: string, newName: string) => {
     if (!newName.trim()) return;
-    const updated = tvState.monitors.map(m => {
+    const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
         return {
           ...m,
