@@ -1750,19 +1750,6 @@ export default function App() {
 
         {/* Standalone TV Screen background visual styling */}
         
-        {/* Floating click to activate sound banner if not dismissed yet */}
-        {!audioOverlayDismissed && (
-          <button
-            onClick={() => {
-              setAudioOverlayDismissed(true);
-              playSynthesizedSound("sino");
-            }}
-            className="absolute top-24 left-1/2 -translate-x-1/2 z-50 bg-yellow-405 hover:bg-yellow-350 active:scale-95 text-stone-950 font-sans font-black text-[10px] md:text-xs py-2.5 px-5 rounded-2xl shadow-2xl flex items-center gap-2 cursor-pointer transition-all animate-bounce uppercase tracking-wider border border-yellow-500"
-          >
-            <Volume2 className="w-4 h-4 animate-pulse" />
-            Clique aqui para ativar áudio e locução ao vivo!
-          </button>
-        )}
 
         {/* Shadow Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/55 pointer-events-none z-0" />
