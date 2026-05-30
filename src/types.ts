@@ -13,6 +13,8 @@ export interface MonitorState {
   mute: boolean;
   volume?: number;
   orientation?: "landscape" | "portrait";
+  layoutMode?: "standard" | "vertical-hybrid";
+  phonePosition?: "top" | "bottom";
   ip?: string;
   forceRefreshTime?: string;
   location?: string;

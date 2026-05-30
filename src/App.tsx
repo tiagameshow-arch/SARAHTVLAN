@@ -38,6 +38,7 @@ import {
   QrCode
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import LandscapePassengerPhone from "./components/LandscapePassengerPhone";
 import { BusLine, TVState, MonitorState } from "./types";
 // @ts-ignore
 import weatherWallpaper from "./assets/images/weather_wallpaper_1779472843262.png";
@@ -1538,6 +1539,26 @@ export default function App() {
     syncMonitorsToServer(updated);
   };
 
+  const handleUpdateLayoutMode = (monitorId: string, layoutMode: "standard" | "vertical-hybrid") => {
+    const updated = tvStateRef.current.monitors.map(m => {
+      if (m.id === monitorId) {
+        return { ...m, layoutMode };
+      }
+      return m;
+    });
+    syncMonitorsToServer(updated);
+  };
+
+  const handleUpdatePhonePosition = (monitorId: string, phonePosition: "top" | "bottom") => {
+    const updated = tvStateRef.current.monitors.map(m => {
+      if (m.id === monitorId) {
+        return { ...m, phonePosition };
+      }
+      return m;
+    });
+    syncMonitorsToServer(updated);
+  };
+
   const handleRenameMonitor = (monitorId: string, newName: string) => {
     if (!newName.trim()) return;
     const updated = tvStateRef.current.monitors.map(m => {
@@ -2079,156 +2100,151 @@ export default function App() {
               className="flex flex-col gap-4 py-2"
             >
               {/* LAYOUT SELECTOR CONTROL BAR FOR HIGH QUALITY USER INTENT */}
-              <div className="bg-stone-950/80 border border-stone-850/80 p-4 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl select-none">
-                <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                  <span className="text-stone-100 font-sans text-xs font-black uppercase tracking-wider flex items-center gap-2 leading-none">
-                    📐 MODO DE VISUALIZAÇÃO DO SIMULADOR (ROTAÇÃO DE TELA)
-                  </span>
-                  <span className="text-stone-400 text-[10px] font-sans font-medium mt-1 leading-normal max-w-lg">
-                    Escolha "Híbrido Vertical" se estiver visualizando em um smartphone em pé. O celular de simulação ficará deitado (horizontal) e a TV ficará em pé (9:16 vertical) para reproduzir vídeos verticais!
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 justify-center">
-                  <div className="flex bg-stone-900 border border-stone-800 p-1 rounded-xl shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setSimulatorLayout("standard")}
-                      className={`px-4 py-2 rounded-lg text-[9.5px] font-extrabold tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-1.5 ${
-                        simulatorLayout === "standard"
-                          ? "bg-[#1e293b] text-cyan-200 border border-[#334155]/60 shadow-[0_2px_6px_rgba(0,0,0,0.3)] scale-[1.02]"
-                          : "text-stone-400 hover:text-stone-200"
-                      }`}
-                    >
-                      <Tv className="w-3.5 h-3.5 animate-pulse" />
-                      LADO A LADO (DEITO)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSimulatorLayout("vertical-hybrid")}
-                      className={`px-4 py-2 rounded-lg text-[9.5px] font-extrabold tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-1.5 ${
-                        simulatorLayout === "vertical-hybrid"
-                          ? "bg-[#10b981] text-white border border-[#10b981]/60 shadow-[0_2px_6px_rgba(16,185,129,0.3)] scale-[1.02]"
-                          : "text-stone-400 hover:text-stone-200"
-                      }`}
-                    >
-                      <Smartphone className="w-3.5 h-3.5" />
-                      HÍBRIDO VERTICAL
-                    </button>
-                  </div>
-
-                  {simulatorLayout === "vertical-hybrid" && (
-                    <div className="flex items-center gap-1 bg-stone-900 border border-stone-800 p-1 rounded-xl shrink-0">
-                      <span className="text-stone-400 text-[8.5px] font-mono font-black uppercase px-2">Celular:</span>
-                      <button
-                        type="button"
-                        onClick={() => setPhonePosition("top")}
-                        className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase transition-all duration-150 ${
-                          phonePosition === "top"
-                            ? "bg-[#1e293b] text-cyan-250 shadow"
-                            : "text-stone-400 hover:text-white"
-                        }`}
-                      >
-                        ▲ NO TOPO
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPhonePosition("bottom")}
-                        className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase transition-all duration-150 ${
-                          phonePosition === "bottom"
-                            ? "bg-[#1e293b] text-cyan-255 shadow"
-                            : "text-stone-400 hover:text-white"
-                        }`}
-                      >
-                        ▼ NA BASE
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* IMMERSIVE 3D SIMULATED ENVIRONMENT CONTAINER */}
-              <div 
-                className="relative w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-stone-800 bg-cover bg-center min-h-[640px] flex items-center justify-center p-4 sm:p-8 transition-all duration-700 select-none pb-12 pt-16"
-                style={{ backgroundImage: `url(${BACKGROUND_PRESETS[bgStyle].url})` }}
-              >
-                {/* Vignette Shadow overlays for incredible realism and screen glow blend */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/35 pointer-events-none z-0" />
-                <div className="absolute inset-0 bg-radial-vignette pointer-events-none opacity-40 z-0" />
+              {(() => {
+                const activeMonitorObj = tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0];
+                const activeLayout = activeMonitorObj?.layoutMode || "standard";
+                const activePhonePos = activeMonitorObj?.phonePosition || "top";
                 
-                {/* Simulated ambient wall bounce glow mapping based on active color */}
-                <div className="absolute bottom-24 left-1/3 w-[50%] h-48 bg-emerald-500/10 filter blur-[90px] rounded-full pointer-events-none mix-blend-screen" />
+                return (
+                  <>
+                    <div className="bg-stone-950/80 border border-stone-850/80 p-4 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl select-none">
+                      <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                        <span className="text-stone-100 font-sans text-xs font-black uppercase tracking-wider flex items-center gap-2 leading-none">
+                          📐 MODO DE VISUALIZAÇÃO DO SIMULADOR (AUTO-ROTAÇÃO DE TELA)
+                        </span>
+                        <span className="text-stone-400 text-[10px] font-sans font-medium mt-1 leading-normal max-w-lg">
+                          Escolha "Híbrido Vertical" para simular a TV na rua (celular deitado transmitindo as notícias na horizontal, e a TV em pé passando comerciais).
+                        </span>
+                      </div>
 
-                {/* THE SIMULATION WORKSPACE SANDBOX */}
-                <div className={`relative w-full max-w-6xl z-10 py-6 flex ${
-                  simulatorLayout === "vertical-hybrid"
-                    ? "flex-col items-center justify-start gap-12"
-                    : "flex-col md:flex-row items-center justify-center gap-6 md:gap-12"
-                }`}>
-                  
-                  {/* Left Layer: Cellphone with adjust offsets */}
-                  <div 
-                    className={`transition-all duration-300 ease-out z-20 flex justify-center w-full md:w-auto ${
-                      simulatorLayout === "vertical-hybrid"
-                        ? phonePosition === "top" ? "order-1" : "order-3"
-                        : "order-1"
-                    }`}
-                    style={{ 
-                      transform: `translate(${phoneX}px, ${phoneY}px) scale(${phoneScale})`,
-                      filter: "drop-shadow(0 25px 40px rgba(0,0,0,0.9))"
-                    }}
-                  >
-                    <div className={`relative flex items-center justify-center transition-all ${
-                      simulatorLayout === "vertical-hybrid"
-                        ? "w-[300px] h-[320px]" // Landscaped envelopes bounds
-                        : "w-full max-w-[275px] shrink-0"
-                    }`}>
-                      <div 
-                        className={`transition-all duration-300 ${
-                          simulatorLayout === "vertical-hybrid"
-                            ? "origin-center -rotate-90 scale-[0.55] sm:scale-[0.62] absolute"
-                            : "w-full"
-                        }`}
-                      >
-                        {renderPassengerPhone(tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0])}
+                      <div className="flex flex-wrap gap-2.5 justify-center">
+                        <div className="flex bg-stone-900 border border-stone-800 p-1 rounded-xl shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLayoutMode(activeMonitorObj.id, "standard")}
+                            className={`px-4 py-2 rounded-lg text-[9.5px] font-extrabold tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-1.5 ${
+                              activeLayout === "standard"
+                                ? "bg-[#1e293b] text-cyan-200 border border-[#334155]/60 shadow-[0_2px_6px_rgba(0,0,0,0.3)] scale-[1.02]"
+                                : "text-stone-400 hover:text-stone-200"
+                            }`}
+                          >
+                            <Tv className="w-3.5 h-3.5" />
+                            LADO A LADO
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLayoutMode(activeMonitorObj.id, "vertical-hybrid")}
+                            className={`px-4 py-2 rounded-lg text-[9.5px] font-extrabold tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-1.5 ${
+                              activeLayout === "vertical-hybrid"
+                                ? "bg-[#10b981] text-white border border-[#10b981]/60 shadow-[0_2px_6px_rgba(16,185,129,0.3)] scale-[1.02]"
+                                : "text-stone-400 hover:text-stone-200"
+                            }`}
+                          >
+                            <Smartphone className="w-3.5 h-3.5 animate-pulse" />
+                            HÍBRIDO VERTICAL
+                          </button>
+                        </div>
+
+                        {activeLayout === "vertical-hybrid" && (
+                          <div className="flex items-center gap-1 bg-stone-900 border border-stone-800 p-1 rounded-xl shrink-0">
+                            <span className="text-stone-400 text-[8.5px] font-mono font-black uppercase px-2">Celular:</span>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdatePhonePosition(activeMonitorObj.id, "top")}
+                              className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase transition-all duration-150 ${
+                                activePhonePos === "top"
+                                  ? "bg-[#1e293b] text-cyan-250 shadow"
+                                  : "text-stone-400 hover:text-white"
+                              }`}
+                            >
+                              ▲ NO TOPO
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdatePhonePosition(activeMonitorObj.id, "bottom")}
+                              className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase transition-all duration-150 ${
+                                activePhonePos === "bottom"
+                                  ? "bg-[#1e293b] text-cyan-255 shadow"
+                                  : "text-stone-400 hover:text-white"
+                              }`}
+                            >
+                              ▼ NA BASE
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Widescreen TV Monitor offset */}
-                  {(() => {
-                    const activeMonitorObj = tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0];
-                    if (!activeMonitorObj) return null;
-                    const activeVideoId = activeMonitorObj.playlist[activeMonitorObj.currentVideoIndex] || "ysz5S6PUM-U";
-                    return (
-                      <div 
-                        className={`transition-all duration-300 ease-out z-10 flex flex-col items-center w-full ${
-                          simulatorLayout === "vertical-hybrid"
-                            ? phonePosition === "bottom" ? "order-1" : "order-2"
-                            : "order-2"
-                        }`}
-                        style={{ 
-                          transform: `translate(${tvX}px, ${tvY}px) scale(${tvScale})`,
-                          filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.95))"
-                        }}
-                      >
-                        {/* High fidelity horizontal setup showing flanked vertical LED column strips from Screenshot 1 */}
-                        <div className="flex items-center justify-center gap-3 w-full max-w-full">
-                          
-                          {/* Left Vertical LED Strip Column */}
-                          <div className="hidden lg:flex w-7 bg-black/90 border border-[#e8a317] h-[340px] xl:h-[390px] rounded-sm items-center justify-center relative overflow-hidden shadow-[0_0_15px_rgba(232,163,23,0.3)] select-none">
-                            <div className="absolute inset-0 bg-[#0b0c03]/90" />
-                            <div className="absolute flex flex-col gap-6 font-mono text-[8.5px] font-black text-yellow-400 uppercase tracking-widest whitespace-nowrap animate-pulse" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                              <span>{">>>> ÚLTIMAS NOTÍCIAS >> SARAHTV ONLINE >> TRANSMISSÃO AO VIVO >>>>"}</span>
+                    {/* IMMERSIVE 3D SIMULATED ENVIRONMENT CONTAINER */}
+                    <div 
+                      className="relative w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-stone-800 bg-cover bg-center min-h-[640px] flex items-center justify-center p-4 sm:p-8 transition-all duration-700 select-none pb-12 pt-16"
+                      style={{ backgroundImage: `url(${BACKGROUND_PRESETS[bgStyle].url})` }}
+                    >
+                      {/* Vignette Overlays */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/35 pointer-events-none z-0" />
+                      <div className="absolute inset-0 bg-radial-vignette pointer-events-none opacity-40 z-0" />
+                      <div className="absolute bottom-24 left-1/3 w-[50%] h-48 bg-emerald-500/10 filter blur-[90px] rounded-full pointer-events-none mix-blend-screen" />
+
+                      {/* THE SIMULATION WORKSPACE SANDBOX */}
+                      <div className={`relative w-full max-w-6xl z-10 py-6 flex ${
+                        activeLayout === "vertical-hybrid"
+                          ? "flex-col items-center justify-start gap-12"
+                          : "flex-col md:flex-row items-center justify-center gap-6 md:gap-12"
+                      }`}>
+                        
+                        {/* Left Layer: Cellphone with adjust offsets */}
+                        <div 
+                          className={`transition-all duration-300 ease-out z-20 flex justify-center w-full md:w-auto ${
+                            activeLayout === "vertical-hybrid"
+                              ? activePhonePos === "top" ? "order-1" : "order-3"
+                              : "order-1"
+                          }`}
+                          style={{ 
+                            transform: `translate(${phoneX}px, ${phoneY}px) scale(${phoneScale})`,
+                            filter: "drop-shadow(0 25px 40px rgba(0,0,0,0.9))"
+                          }}
+                        >
+                          <div className={`relative flex items-center justify-center transition-all ${
+                            activeLayout === "vertical-hybrid"
+                              ? "w-full max-w-[500px] shrink-0"
+                              : "w-full max-w-[275px] shrink-0"
+                          }`}>
+                            <div className="w-full">
+                              {renderPassengerPhone(activeMonitorObj, activeLayout === "vertical-hybrid")}
                             </div>
                           </div>
+                        </div>
 
-                          {/* Widescreen Simulated Physical TV Frame with dynamic controls */}
-                          <div className={`relative bg-[#050505] border-[11px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden flex flex-col justify-between items-stretch transition-all duration-300 ${
-                            simulatorLayout === "vertical-hybrid" || activeMonitorObj.orientation === "portrait"
-                              ? "aspect-[9/16] w-[210px] sm:w-[280px] md:w-[320px] lg:w-[360px]"
-                              : "aspect-video w-[340px] sm:w-[560px] md:w-[690px] lg:w-[780px] xl:w-[910px]"
-                          }`}>
+                        {/* Widescreen TV Monitor offset */}
+                        {(() => {
+                          const activeVideoId = activeMonitorObj.playlist[activeMonitorObj.currentVideoIndex] || "ysz5S6PUM-U";
+                          return (
+                            <div 
+                              className={`transition-all duration-300 ease-out z-10 flex flex-col items-center w-full ${
+                                activeLayout === "vertical-hybrid"
+                                  ? activePhonePos === "bottom" ? "order-1" : "order-2"
+                                  : "order-2"
+                              }`}
+                              style={{ 
+                                transform: `translate(${tvX}px, ${tvY}px) scale(${tvScale})`,
+                                filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.95))"
+                              }}
+                            >
+                              {/* High fidelity setup */}
+                              <div className="flex items-center justify-center gap-3 w-full max-w-full">
+                                
+                                <div className="hidden lg:flex w-7 bg-black/90 border border-[#e8a317] h-[340px] xl:h-[390px] rounded-sm items-center justify-center relative overflow-hidden shadow-[0_0_15px_rgba(232,163,23,0.3)] select-none animate-pulse">
+                                  <div className="absolute inset-0 bg-[#0b0c03]/90" />
+                                  <div className="absolute flex flex-col gap-6 font-mono text-[8.5px] font-black text-yellow-400 uppercase tracking-widest whitespace-nowrap" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                                    <span>{">>>> ÚLTIMAS NOTÍCIAS >> SARAHTV ONLINE >> TRANSMISSÃO AO VIVO >>>>"}</span>
+                                  </div>
+                                </div>
+
+                                <div className={`relative bg-[#050505] border-[11px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden flex flex-col justify-between items-stretch transition-all duration-300 ${
+                                  activeLayout === "vertical-hybrid" || activeMonitorObj.orientation === "portrait"
+                                    ? "aspect-[9/16] w-[210px] sm:w-[280px] md:w-[320px] lg:w-[360px]"
+                                    : "aspect-video w-[340px] sm:w-[560px] md:w-[690px] lg:w-[780px] xl:w-[910px]"
+                                }`}>
                             
                             {/* Inner Translucent Header on Simulated TV Screen */}
                             <div className="relative w-full h-11 bg-black/85 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
@@ -2420,6 +2436,9 @@ export default function App() {
                 </div>
               </div>
 
+          </>
+        );
+      })()}
             </motion.div>
           )}
 
@@ -2971,24 +2990,89 @@ export default function App() {
             </div>
 
             {/* Simulation Controls (Rotation Layout) */}
-            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5">
+            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2">
               <span className="text-[8px] text-stone-450 font-extrabold uppercase tracking-wide block">
                 Giro, Layout e Reset da Tela
               </span>
+              
               <button
                 type="button"
                 onClick={() => {
                   if (activeMonitor) handleToggleOrientation(activeMonitor.id);
                 }}
-                className={`py-2.5 px-3 w-full rounded-xl border text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md font-sans ${
+                className={`py-2 px-3 w-full rounded-lg border text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md font-sans ${
                   activeMonitor?.orientation === "portrait"
                     ? "bg-amber-950/90 border-[#e8a317] text-[#e8a317] shadow-[0_2px_8px_rgba(232,163,23,0.15)]"
                     : "bg-stone-900 border-stone-850 text-stone-200 hover:bg-stone-850"
                 }`}
               >
                 <Smartphone className={`w-3.5 h-3.5 ${activeMonitor?.orientation === "portrait" ? "text-amber-400 rotate-90" : "text-stone-400"} transition-transform duration-300`} />
-                <span className="tracking-wide uppercase font-sans leading-none">GIRAR ORIENTAÇÃO DA TELA (RET/PAIS)</span>
+                <span className="tracking-wide uppercase font-sans leading-none">SENTIDO DA TELA (RET/PAIS)</span>
               </button>
+
+              {/* Layout Mode selector */}
+              <div className="flex bg-stone-900 border border-stone-850 p-1 rounded-lg w-full">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeMonitor) handleUpdateLayoutMode(activeMonitor.id, "standard");
+                  }}
+                  className={`flex-1 py-1.5 rounded-md text-[8px] font-extrabold tracking-wider uppercase transition-all duration-150 ${
+                    (activeMonitor?.layoutMode || "standard") === "standard"
+                      ? "bg-[#1e293b] text-cyan-200 border border-[#334155]/60 shadow"
+                      : "text-stone-400 hover:text-stone-200"
+                  }`}
+                >
+                  PADRÃO
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeMonitor) handleUpdateLayoutMode(activeMonitor.id, "vertical-hybrid");
+                  }}
+                  className={`flex-1 py-1.5 rounded-md text-[8px] font-extrabold tracking-wider uppercase transition-all duration-150 ${
+                    activeMonitor?.layoutMode === "vertical-hybrid"
+                      ? "bg-[#10b981] text-white border border-[#10b981]/60 shadow"
+                      : "text-stone-400 hover:text-stone-200"
+                  }`}
+                >
+                  HÍBRIDO VERT.
+                </button>
+              </div>
+
+              {activeMonitor?.layoutMode === "vertical-hybrid" && (
+                <div className="flex bg-stone-950 p-1 rounded-lg border border-stone-900 w-full justify-between items-center px-1.5">
+                  <span className="text-stone-400 text-[7px] font-black uppercase">CELULAR:</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeMonitor) handleUpdatePhonePosition(activeMonitor.id, "top");
+                      }}
+                      className={`px-2 py-1 rounded-md text-[7.5px] font-black uppercase transition-all ${
+                        (activeMonitor?.phonePosition || "top") === "top"
+                          ? "bg-[#1e293b] text-cyan-200"
+                          : "text-stone-400 hover:text-white"
+                      }`}
+                    >
+                      TOP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeMonitor) handleUpdatePhonePosition(activeMonitor.id, "bottom");
+                      }}
+                      className={`px-2 py-1 rounded-md text-[7.5px] font-black uppercase transition-all ${
+                        activeMonitor?.phonePosition === "bottom"
+                          ? "bg-[#1e293b] text-cyan-200"
+                          : "text-stone-400 hover:text-white"
+                      }`}
+                    >
+                      BASE
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -2997,7 +3081,7 @@ export default function App() {
                     handleRemoteForceRefresh(activeMonitor.id);
                   }
                 }}
-                className="py-2.5 px-3 w-full bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md font-sans cursor-pointer mt-1"
+                className="py-2 px-3 w-full bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-lg text-[9px] font-black flex items-center justify-center gap-2 transition-all duration-150 active:scale-95 shadow-md font-sans cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="tracking-wide uppercase font-sans leading-none">RECARREGAR TELA REMOTAMENTE (F5)</span>
@@ -3022,7 +3106,7 @@ export default function App() {
   // ==========================================
   // VIEW: THE DYNAMIC PASSENGER CELLPHONE
   // ==========================================
-  function renderPassengerPhone(monitorArg?: any) {
+  function renderPassengerPhone(monitorArg?: any, isLandscape?: boolean) {
     const monitorObj = monitorArg || tvState.monitors.find(m => m.id === (urlMonitorId || selectedMonitorId)) || tvState.monitors[0];
     return (
       <PassengerPhone 
@@ -3033,6 +3117,7 @@ export default function App() {
         slide={passengerScreenSlide}
         setSlide={setPassengerScreenSlide}
         getLineTime={getLineTime}
+        isLandscape={isLandscape}
       />
     );
   }
@@ -3045,6 +3130,7 @@ interface PassengerPhoneProps {
   slide?: string;
   setSlide?: (slide: string) => void;
   getLineTime: (lineNumber: string) => string;
+  isLandscape?: boolean;
 }
 
 const SLIDES_SEQUENCE = [
@@ -3230,8 +3316,23 @@ function PassengerPhone({
   activeMonitor,
   slide: propSlide,
   setSlide: propSetSlide,
-  getLineTime
+  getLineTime,
+  isLandscape = false
 }: PassengerPhoneProps) {
+  if (isLandscape) {
+    return (
+      <LandscapePassengerPhone
+        tvState={tvState}
+        timeState={timeState}
+        getWeatherIcon={getWeatherIcon}
+        activeMonitor={activeMonitor}
+        slide={propSlide}
+        setSlide={propSetSlide}
+        getLineTime={getLineTime}
+      />
+    );
+  }
+
   const [localSlide, setLocalSlide] = useState<string>("weather");
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
