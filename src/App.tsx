@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, FormEvent, ReactNode, Dispatch, SetStateAction } from "react";
+import React, { useState, useEffect, useRef, FormEvent, ReactNode, Dispatch, SetStateAction } from "react";
 import { 
   Tv, 
   Smartphone, 
@@ -2972,10 +2972,13 @@ function PassengerPhone({
   const [localSlide, setLocalSlide] = useState<string>("weather");
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Custom states for interactive items
   const [likedArticles, setLikedArticles] = useState<Record<string, boolean>>({});
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Record<string, boolean>>({});
+  const [copiedToast, setCopiedToast] = useState<string | null>(null);
   
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
@@ -3094,60 +3097,130 @@ function PassengerPhone({
   const slide = propSlide !== undefined ? propSlide : localSlide;
   const setSlide = propSetSlide !== undefined ? propSetSlide : setLocalSlide;
 
+  const currTemp = parseInt(tvState.temperature) || 17;
+  const sensation = currTemp - 1;
+  const clockShort = timeState ? timeState.substring(0, 5) : "11:05";
+
+  // Re-memoized unified Instagram Reels vertical stream
+  const reelsFeed = React.useMemo(() => {
+    const list: Array<{
+      id: string;
+      type: "weather" | "news";
+      title: string;
+      subtitle: string;
+      source: string;
+      image?: string;
+      time: string;
+      badge: string;
+      badgeColor: string;
+      category: string;
+    }> = [];
+
+    // 1. Clima (Weather Post) - Always top of feed
+    list.push({
+      id: "clima-osasco-post",
+      type: "weather",
+      title: "PREVISÃO DO CLIMA EM OSASCO",
+      subtitle: `Temperatura atual de ${currTemp}°C na localidade. Tempo instável, prepare seu casaco e agasalho dadas as correntes de vento litorâneo na região.`,
+      source: "clima_tempo_osasco",
+      time: "Agora",
+      badge: "CLIMA ATUAL",
+      badgeColor: "bg-amber-500/25 border-amber-500/35 text-amber-200",
+      category: "weather"
+    });
+
+    // 2. Cycle and alternate categories to create an attractive social media stream of content
+    const catsAndDetails = [
+      { key: "bairro", tag: "JORNAL DO BAIRRO" },
+      { key: "geral", tag: "CNN / RECORD NEWS" },
+      { key: "esportes", tag: "GLOBO ESPORTE" },
+      { key: "gospel", tag: "GOSPEL" },
+      { key: "fofocas", tag: "FUXICO" }
+    ];
+
+    const maxLen = 3;
+    for (let i = 0; i < maxLen; i++) {
+      catsAndDetails.forEach(({ key, tag }) => {
+        const art = ALL_NEWS_DATABASE[key]?.[i];
+        if (art) {
+          list.push({
+            id: `${key}-${i}-${art.title}`,
+            type: "news",
+            title: art.title,
+            subtitle: art.subtitle,
+            source: art.source,
+            image: art.image,
+            time: art.time,
+            badge: art.badge || tag,
+            badgeColor: art.badgeColor || "bg-stone-850 text-white/90 border-stone-800",
+            category: `news-${key}`
+          });
+        }
+      });
+    }
+
+    // Filter dynamic feed based on search queries
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return list.filter(item => {
+        if (item.type === "weather") {
+          return "clima tempo osasco previsão temperatura metros graus".includes(q);
+        }
+        return item.title.toLowerCase().includes(q) || 
+               item.subtitle.toLowerCase().includes(q) || 
+               item.source.toLowerCase().includes(q);
+      });
+    }
+
+    return list;
+  }, [searchQuery, currTemp, tvState.temperature]);
+
+  // Jump to specific slide when tab/category changed
   const handleSetSlide = (newSlide: string) => {
     setSlide(newSlide);
     setProgress(0);
+    if (!newSlide.startsWith("bus-")) {
+      if (newSlide === "weather") {
+        setActiveIndex(0);
+      } else {
+        const foundIdx = reelsFeed.findIndex(item => item.category === newSlide);
+        if (foundIdx !== -1) {
+          setActiveIndex(foundIdx);
+        }
+      }
+    }
   };
 
-  // Rotate category articles on slide change to guarantee always fresh content when returning to a slide!
-  useEffect(() => {
-    const categoryKey = slide.replace("news-", "");
-    if (newsOffsets[categoryKey] !== undefined) {
-      setNewsOffsets(prev => {
-        const arry = ALL_NEWS_DATABASE[categoryKey] || [];
-        const nextVal = (prev[categoryKey] + 1) % (arry.length || 1);
-        return {
-          ...prev,
-          [categoryKey]: nextVal
-        };
+  // Scroll Sync to ensure the viewport matches the active index (handles slides autoplay & tab clicks smoothly)
+  React.useEffect(() => {
+    if (scrollContainerRef.current && !slide.startsWith("bus-")) {
+      const containerHeight = scrollContainerRef.current.clientHeight || 355;
+      scrollContainerRef.current.scrollTo({
+        top: activeIndex * containerHeight,
+        behavior: "smooth"
       });
     }
-  }, [slide]);
+    setProgress(0);
+  }, [activeIndex, slide]);
 
-  // Rotates category articles based on state offsets to ensure varied display
-  const getRotatedCategoryArticles = (cat: string): NewsArticle[] => {
-    const list = ALL_NEWS_DATABASE[cat] || [];
-    if (list.length === 0) return [];
-    const offset = newsOffsets[cat] || 0;
-    return [...list.slice(offset), ...list.slice(0, offset)];
-  };
-
-  // Get current active articles to render based on selection filter
-  const getActiveFeedArticles = (): NewsArticle[] => {
-    if (slide === "weather") {
-      const bArticles = getRotatedCategoryArticles("bairro");
-      const gArticles = getRotatedCategoryArticles("geral");
-      const eArticles = getRotatedCategoryArticles("esportes");
-      const fArticles = getRotatedCategoryArticles("fofocas");
-      const goArticles = getRotatedCategoryArticles("gospel");
-      
-      const merged: NewsArticle[] = [];
-      const maxLength = Math.max(bArticles.length, gArticles.length, eArticles.length, fArticles.length, goArticles.length);
-      for (let i = 0; i < maxLength; i++) {
-        if (bArticles[i]) merged.push(bArticles[i]);
-        if (gArticles[i]) merged.push(gArticles[i]);
-        if (eArticles[i]) merged.push(eArticles[i]);
-        if (fArticles[i]) merged.push(fArticles[i]);
-        if (goArticles[i]) merged.push(goArticles[i]);
+  // Manual drag / scroll gesture handler to keep header pills synchronized when swiping up/down
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (slide.startsWith("bus-")) return;
+    const scrollTop = e.currentTarget.scrollTop;
+    const containerHeight = e.currentTarget.clientHeight || 355;
+    if (containerHeight > 0) {
+      const computedIndex = Math.round(scrollTop / containerHeight);
+      if (computedIndex !== activeIndex && computedIndex >= 0 && computedIndex < reelsFeed.length) {
+        setActiveIndex(computedIndex);
+        const targetItem = reelsFeed[computedIndex];
+        if (targetItem && targetItem.category && targetItem.category !== slide) {
+          setSlide(targetItem.category);
+        }
       }
-      return merged;
     }
-
-    const catKey = slide.replace("news-", "");
-    return getRotatedCategoryArticles(catKey);
   };
 
-  // Autoplay sequence logic
+  // Autoplay sequence logic - integrated vertical snaps + bus rotators
   useEffect(() => {
     if (!isAutoplay) {
       setProgress(0);
@@ -3159,9 +3232,22 @@ function PassengerPhone({
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          const currentIndex = SLIDES_SEQUENCE.indexOf(slide);
-          const nextIndex = (currentIndex + 1) % SLIDES_SEQUENCE.length;
-          setSlide(SLIDES_SEQUENCE[nextIndex]);
+          if (slide.startsWith("bus-")) {
+            // Bus timetables auto-rotation
+            const currentIndex = SLIDES_SEQUENCE.indexOf(slide);
+            const nextIndex = (currentIndex + 1) % SLIDES_SEQUENCE.length;
+            setSlide(SLIDES_SEQUENCE[nextIndex]);
+          } else {
+            // Instagram full-screen Reels auto-rotation (slides up one-by-one)
+            setActiveIndex((curr) => {
+              const nextVal = (curr + 1) % reelsFeed.length;
+              const targetItem = reelsFeed[nextVal];
+              if (targetItem && targetItem.category) {
+                setSlide(targetItem.category);
+              }
+              return nextVal;
+            });
+          }
           return 0;
         }
         return prev + (stepMs / durationMs) * 100;
@@ -3169,21 +3255,7 @@ function PassengerPhone({
     }, stepMs);
 
     return () => clearInterval(interval);
-  }, [isAutoplay, slide, setSlide]);
-
-  const currTemp = parseInt(tvState.temperature) || 17;
-  const sensation = currTemp - 1;
-  const clockShort = timeState ? timeState.substring(0, 5) : "11:05";
-
-  // Filter feed by search query
-  const rawArticles = getActiveFeedArticles();
-  const filteredArticles = rawArticles.filter(art => {
-    if (!searchQuery) return true;
-    const term = searchQuery.toLowerCase();
-    return art.title.toLowerCase().includes(term) || 
-           art.subtitle.toLowerCase().includes(term) || 
-           art.source.toLowerCase().includes(term);
-  });
+  }, [isAutoplay, slide, reelsFeed, setSlide]);
 
   return (
     <div className="w-full bg-[#1e222b] text-[#f1f3f4] rounded-[2.8rem] border-[8px] border-[#2d323f] p-3 shadow-[0_25px_50px_rgba(0,0,0,0.85)] relative select-none font-sans">
@@ -3273,385 +3345,330 @@ function PassengerPhone({
         </div>
 
         {/* COMPONENT BODY */}
-        <div className="flex-grow z-10 overflow-y-auto max-h-[360px] h-[355px] scrollbar-none relative bg-[#f1f3f4] p-3 pt-1 flex flex-col gap-3">
+        <div 
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className={`flex-grow z-10 scrollbar-none relative transition-all duration-300 ${
+            slide.startsWith("bus-")
+              ? "overflow-y-auto max-h-[360px] h-[355px] bg-[#f4f6f9] p-3 pt-1 flex flex-col gap-3"
+              : "overflow-y-scroll snap-y snap-mandatory max-h-[360px] h-[355px] bg-black p-0 flex flex-col gap-0"
+          }`}
+        >
           <AnimatePresence mode="wait" initial={false}>
             {(slide === "weather" || slide.startsWith("news-")) && (
               <motion.div
-                key={`feed-${slide}`}
+                key="instagram-reels-feed"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col gap-3 text-left w-full"
+                className="w-full flex flex-col"
               >
-                {/* Horizontal Stories bar styled like Instagram */}
-                <div className="bg-white rounded-2xl p-2.5 flex flex-col gap-1.5 shadow-2xs border border-stone-200 select-none shrink-0 overflow-hidden animate-fade-in">
-                  <div className="flex justify-between items-center pr-1 select-none">
-                    <span className="text-[7.5px] font-sans font-black text-stone-400 uppercase tracking-wider">Canais Populares</span>
-                    <span className="text-[7px] text-blue-500 font-bold bg-blue-50 px-1 py-0.2 rounded">Feed de Osasco</span>
-                  </div>
-                  <div className="flex overflow-x-auto gap-3.5 pb-1 scrollbar-none scroll-smooth">
-                    {stories.map((st) => {
-                      const isStoryActive = slide === st.key;
-                      return (
-                        <button
-                          key={st.key}
-                          onClick={() => handleSetSlide(st.key)}
-                          className="flex flex-col items-center gap-1 shrink-0 relative focus:outline-none active:scale-95 transition"
-                        >
-                          {/* Story Avatar Ring */}
-                          <div className={`w-10 h-10 rounded-full p-[2px] flex items-center justify-center transition-all ${
-                            isStoryActive 
-                              ? "bg-slate-900 scale-102 shadow-[0_0_8px_rgba(15,23,42,0.15)]" 
-                              : "bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888]"
-                          }`}>
-                            <div className="bg-white w-full h-full rounded-full p-[1.5px] flex items-center justify-center overflow-hidden">
+
+                {reelsFeed.map((item, idx) => {
+                  if (item.type === "weather") {
+                    // WEATHER ITEM RENDER
+                    return (
+                      <div 
+                        key={item.id}
+                        className="w-full h-[355px] min-h-[355px] snap-start relative flex flex-col justify-between p-4 text-white overflow-hidden bg-gradient-to-br from-[#0c2445] via-[#10305c] to-[#1a447c] shrink-0"
+                      >
+                        {/* Cloud/Atmosphere decorations */}
+                        <div className="absolute top-[-30px] right-[-30px] w-44 h-44 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-[-10px] left-[-30px] w-36 h-36 bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
+                        
+                        {/* Top Bar inside slide: Profile and status */}
+                        <div className="flex items-center justify-between z-10">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-amber-400/20 border border-amber-300/30 flex items-center justify-center text-xs shadow-xs text-center">
+                              🌦️
+                            </div>
+                            <div className="leading-none text-left font-sans">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-black text-white tracking-tight">clima_tempo_osasco</span>
+                                <span className="text-[8px] text-blue-400 font-bold bg-blue-500/10 px-0.5 rounded-xs leading-none">✓</span>
+                              </div>
+                              <span className="text-[7px] text-stone-300 font-semibold uppercase font-mono tracking-wider">Avenida Zumbi dos Palmares</span>
+                            </div>
+                          </div>
+                          <span className="bg-amber-400 text-stone-950 text-[6.5px] font-mono font-black py-0.5 px-2 rounded-full tracking-wider shadow-xs uppercase">
+                            Clima ao Vivo
+                          </span>
+                        </div>
+
+                        {/* Center visual: Temperature display and weather status */}
+                        <div className="flex flex-col items-center justify-center text-center z-10 py-2">
+                          <div className="relative inline-block select-none scale-102">
+                            <div className="text-4xl sm:text-5xl drop-shadow-[0_4px_10px_rgba(250,204,21,0.25)] animate-bounce [animation-duration:3s]">
+                              🌦️
+                            </div>
+                          </div>
+                          <span className="text-5xl sm:text-6xl font-display font-black tracking-tighter text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] mt-1 select-all font-sans">
+                            {currTemp}°C
+                          </span>
+                          <span className="text-[10px] uppercase font-mono font-black text-amber-300 tracking-widest mt-1 block select-none">
+                            Sensação {sensation}°C • Instável
+                          </span>
+                        </div>
+
+                        {/* Bottom section: Details box and Description caption */}
+                        <div className="space-y-2 z-10">
+                          {/* 3 columns grid metadata */}
+                          <div className="grid grid-cols-3 gap-1.5 bg-black/35 border border-white/10 p-1.5 rounded-xl text-center backdrop-blur-xs text-[7.5px] font-mono select-none">
+                            <div className="flex flex-col">
+                              <span className="text-stone-400 leading-none">UMIDADE</span>
+                              <span className="text-white font-extrabold font-sans text-[9px] mt-0.5">85%</span>
+                            </div>
+                            <div className="flex flex-col border-x border-white/10">
+                              <span className="text-stone-400 leading-none">VENTO</span>
+                              <span className="text-white font-extrabold font-sans text-[9px] mt-0.5">14 km/h</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-stone-400 leading-none">PRESSÃO</span>
+                              <span className="text-white font-extrabold font-sans text-[9px] mt-0.5">1014 hPa</span>
+                            </div>
+                          </div>
+
+                          {/* Description text styled like Instagram bio description */}
+                          <div className="text-[9px] text-white leading-relaxed font-sans text-left bg-black/20 p-2 rounded-xl backdrop-blur-xs border border-white/5">
+                            <span className="font-black mr-1 text-amber-300">@clima_tempo_osasco</span>
+                            Previsão do tempo detalhada com alta umidade e queda gradual de sensação térmica à noite em Osasco. Pedestres na rua, preparem os agasalhos! 🧥🌧️ #ClimaOsasco #PrevisaoTempo #OsascoNews
+                          </div>
+                        </div>
+
+                        {/* Floating Interaction and guidance Panel on the right margin */}
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-4 text-center items-center z-20">
+                          <button 
+                            onClick={() => {
+                              setLikedArticles(prev => ({ ...prev, "clima-osasco-post": !prev["clima-osasco-post"] }));
+                            }}
+                            className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-red-500 transition active:scale-75 focus:outline-none"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
+                              <svg viewBox="0 0 24 24" fill={likedArticles["clima-osasco-post"] ? "#ef4444" : "none"} stroke={likedArticles["clima-osasco-post"] ? "#ef4444" : "#ffffff"} strokeWidth="2.5" className="w-4.5 h-4.5">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                              </svg>
+                            </div>
+                            <span className="text-[7px] font-bold font-mono text-white/95">{likedArticles["clima-osasco-post"] ? 1421 : 1420}</span>
+                          </button>
+
+                          <button 
+                            onClick={() => setActiveCommentsPost("clima-osasco-post")}
+                            className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-blue-400 transition active:scale-75 focus:outline-none"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="w-4.5 h-4.5">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                              </svg>
+                            </div>
+                            <span className="text-[7px] font-bold font-mono text-white/95">{commentsState["clima-osasco-post"]?.length || 3}</span>
+                          </button>
+
+                          <div className="mt-2 text-white/30 text-[9px] animate-bounce flex flex-col items-center">
+                            <span>▲</span>
+                            <span className="text-[5px] font-black uppercase font-mono tracking-tighter leading-none">Subir</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // NEWS ARTICLE ITEM RENDER
+                  let profile = { username: "jornal_bairro", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150", verified: true };
+                  if (item.category === "news-geral") {
+                    profile = { username: "g1_portal_osasco", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150", verified: true };
+                  } else if (item.category === "news-esportes") {
+                    profile = { username: "globo_esporte_sp", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150", verified: true };
+                  } else if (item.category === "news-gospel") {
+                    profile = { username: "plenum_gospel_br", avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150", verified: false };
+                  } else if (item.category === "news-fofocas") {
+                    profile = { username: "fuxico_original_oficial", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150", verified: true };
+                  }
+
+                  return (
+                    <div 
+                      key={item.id}
+                      className="w-full h-[355px] min-h-[355px] snap-start relative flex flex-col justify-between p-4 text-white overflow-hidden bg-black shrink-0"
+                    >
+                      {/* Background Image of news article */}
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="absolute inset-0 w-full h-full object-cover z-0 filter brightness-[0.78]"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-stone-900 z-0" />
+                      )}
+
+                      {/* Shadow Overlay for extreme text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/98 via-black/45 to-black/60 pointer-events-none z-0" />
+
+                      {/* Top Row: source name & badge */}
+                      <div className="flex items-center justify-between z-10 select-none">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] p-[1.5px] flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                            <div className="bg-white w-full h-full rounded-full p-[1px] flex items-center justify-center overflow-hidden">
                               <img
-                                src={st.profile.avatar}
-                                alt={st.profile.displayName}
+                                src={profile.avatar}
+                                alt={item.source}
                                 className="w-full h-full rounded-full object-cover"
                                 referrerPolicy="no-referrer"
                               />
                             </div>
                           </div>
-                          {/* Mini Indicator Badge inside Story */}
-                          <div className="absolute right-0 bottom-4 bg-slate-900 border border-white text-[7.5px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
-                            {st.icon}
-                          </div>
-                          <span className={`text-[8.5px] font-sans tracking-tight max-w-[44px] truncate leading-none mt-0.5 ${
-                            isStoryActive ? "text-slate-900 font-extrabold" : "text-stone-500 font-semibold"
-                          }`}>
-                            {st.profile.username}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Main Profile Header card of news content */}
-                {slide !== "weather" && (
-                  <div className="bg-white rounded-2xl p-3 border border-stone-200 flex flex-col gap-2 text-left shadow-2xs">
-                    <div className="flex gap-3 items-center">
-                      <div className="w-12 h-12 rounded-full border border-stone-200 overflow-hidden shrink-0">
-                        <img 
-                          src={getSourceProfile(slide).avatar} 
-                          alt="Avatar" 
-                          className="w-full h-full object-cover" 
-                          referrerPolicy="no-referrer" 
-                        />
-                      </div>
-                      <div className="flex-grow leading-none">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[11px] font-sans font-black text-stone-900">
-                            {getSourceProfile(slide).username}
-                          </span>
-                          {getSourceProfile(slide).verified && (
-                            <span className="text-[9px] text-[#0095f6]" title="Perfil Verificado">✓</span>
-                          )}
-                        </div>
-                        <span className="text-[8px] text-stone-500 font-bold font-sans mt-1 block">
-                          {getSourceProfile(slide).displayName}
-                        </span>
-                        <div className="flex gap-2.5 mt-1 text-[7.5px] font-mono text-stone-400 font-bold">
-                          <span>{ALL_NEWS_DATABASE[slide.replace("news-", "")]?.length || 0} posts</span>
-                          <span>{getSourceProfile(slide).followers} seguidor.</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[8.5px] font-sans font-normal leading-normal text-stone-600 border-t border-stone-105 pt-1.5 mt-0.5 select-text">
-                      {getSourceProfile(slide).bio}
-                    </p>
-                    <span className="text-[7.5px] font-bold text-blue-600 tracking-tight block -mt-1 leading-none">
-                      linktr.ee/{getSourceProfile(slide).username}
-                    </span>
-                  </div>
-                )}
-
-                {/* Vertically Scrolling news cards */}
-                <div className="flex flex-col gap-3 pb-3">
-                  
-                  {/* WEATHER POST CARD INJECTED AT TOP OF 'weather' FEED */}
-                  {slide === "weather" && (
-                    <div className="bg-white border border-stone-200 rounded-2xl py-3 px-3 shadow-2xs flex flex-col gap-2 relative">
-                      
-                      {/* Weather Post Header */}
-                      <div className="flex items-center justify-between border-b border-stone-100 pb-1.5 select-none">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0a2342] to-[#123c69] flex items-center justify-center overflow-hidden border border-blue-900 shadow-2xs shrink-0 p-0.5">
-                            <span className="text-[10px]">⛅</span>
-                          </div>
                           <div className="text-left leading-none font-sans">
                             <div className="flex items-center gap-0.5">
-                              <span className="text-[9.5px] font-black text-stone-900">clima_tempo_osasco</span>
-                              <span className="text-[8px] text-[#0095f6] font-bold">✓</span>
+                              <span className="text-[9.5px] font-black text-white leading-none">{profile.username}</span>
+                              {profile.verified && (
+                                <span className="text-[8px] text-blue-400 font-bold bg-blue-500/10 px-0.5 rounded-xs leading-none">✓</span>
+                              )}
                             </div>
-                            <span className="text-[7px] text-stone-400 font-bold block mt-0.5">Osasco, São Paulo</span>
+                            <span className="text-[6.5px] text-stone-300 font-bold font-mono uppercase tracking-tight block mt-0.5">
+                              {item.source}
+                            </span>
                           </div>
                         </div>
-                        <span className="text-[7.5px] bg-amber-50 text-amber-700 font-mono font-bold border border-amber-200 px-1.5 py-0.5 rounded-full select-all">CLIMA ATUAL</span>
-                      </div>
 
-                      {/* Weather Post Content */}
-                      <div className="bg-gradient-to-br from-[#0a2342] to-[#123c69] border border-blue-900 rounded-xl p-3 text-white shadow-md flex flex-col gap-2 relative overflow-hidden shrink-0 text-left select-none">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/15 rounded-full blur-xl pointer-events-none" />
-                        
-                        <div className="flex justify-between items-center leading-none">
-                          <div>
-                            <span className="text-[7px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none block">Osasco • Previsão</span>
-                            <span className="text-2xl font-display font-black tracking-tighter mt-1 block select-all">{currTemp}°C</span>
-                          </div>
-                          <div className="text-2xl animate-bounce">🌦️</div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-[8px] font-mono text-stone-200 border-t border-white/10 pt-1.5 mt-1">
-                          <span>Sensação: {sensation}°C</span>
-                          <span className="text-emerald-400 font-bold">Instável com Chuva</span>
-                          <span>Umid.: 85%</span>
+                        <div className="flex gap-1.5 items-center">
+                          <span className={`text-[6.5px] font-mono font-black italic tracking-wider py-0.5 px-2 rounded-full border shadow-xs ${item.badgeColor || 'bg-stone-800 text-stone-100'}`}>
+                            {item.badge}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Post Actions for Weather */}
-                      <div className="flex justify-between items-center pt-1 border-t border-stone-100 select-none">
-                        <div className="flex gap-3">
-                          <button 
-                            onClick={() => {
-                              setLikedArticles(prev => ({
-                                ...prev,
-                                "ClimaTempoOsasco": !prev["ClimaTempoOsasco"]
-                              }));
-                            }}
-                            className="transition active:scale-75 focus:outline-none"
-                          >
-                            <svg viewBox="0 0 24 24" fill={likedArticles["ClimaTempoOsasco"] ? "#ef4444" : "none"} stroke={likedArticles["ClimaTempoOsasco"] ? "#ef4444" : "#1c1917"} strokeWidth="2.5" className="w-5 h-5">
+                      {/* Center content: Empty space */}
+                      <div className="flex-grow z-10" />
+
+                      {/* Bottom content: Big Display Typography Title + Subtitle */}
+                      <div className="space-y-1.5 z-10 text-left">
+                        {/* Category banner as accent color */}
+                        <span className="text-[6.5px] border border-white/20 bg-white/10 text-white font-mono font-black px-1.5 py-0.5 rounded uppercase tracking-wider select-none leading-none inline-block">
+                          🕒 {item.time}
+                        </span>
+
+                        {/* Title - Optimized for street readability */}
+                        <h3 className="text-[12.5px] sm:text-[13.5px] font-display font-black uppercase tracking-tight leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.88)] text-white select-all font-sans">
+                          {item.title}
+                        </h3>
+
+                        {/* Subtitle / Caption description of the article */}
+                        <p className="text-[8.5px] text-stone-200/90 leading-relaxed font-sans font-medium line-clamp-3 select-all bg-black/15 p-2 rounded-xl backdrop-blur-xs border border-white/5">
+                          {item.subtitle}
+                        </p>
+
+                        {/* Beautiful tags list */}
+                        <span className="text-blue-400 font-mono text-[7px] font-black block tracking-tight select-none">
+                          #osasco #noticiastemporeal #{profile.username} #bairro
+                        </span>
+                      </div>
+
+                      {/* Right side Floating panel of action triggers (like, comment, bookmark, share!) */}
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-4 text-center items-center z-20 select-none">
+                        <button 
+                          onClick={() => {
+                            setLikedArticles(prev => ({ ...prev, [item.title]: !prev[item.title] }));
+                          }}
+                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-red-500 transition active:scale-75 focus:outline-none"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
+                            <svg viewBox="0 0 24 24" fill={likedArticles[item.title] ? "#ef4444" : "none"} stroke={likedArticles[item.title] ? "#ef4444" : "#ffffff"} strokeWidth="2.5" className="w-4.5 h-4.5">
                               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                             </svg>
-                          </button>
-                          
-                          <button 
-                            onClick={() => setActiveCommentsPost("clima-osasco-post")}
-                            className="transition active:scale-75 focus:outline-none"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5">
+                          </div>
+                          <span className="text-[7px] font-bold font-mono text-white/95">{likedArticles[item.title] ? 594 : 593}</span>
+                        </button>
+
+                        <button 
+                          onClick={() => setActiveCommentsPost(item.title)}
+                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-blue-400 transition active:scale-75 focus:outline-none"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="w-4.5 h-4.5">
                               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                             </svg>
-                          </button>
-
-                          <button 
-                            onClick={() => {
-                              alert("Boletim meteorológico compartilhado no feed!");
-                            }}
-                            className="transition active:scale-75 focus:outline-none"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5">
-                              <line x1="22" y1="2" x2="11" y2="13" />
-                              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                            </svg>
-                          </button>
-                        </div>
+                          </div>
+                          <span className="text-[7px] font-bold font-mono text-white/95">{commentsState[item.title]?.length || 2}</span>
+                        </button>
 
                         <button 
                           onClick={() => {
-                            setBookmarkedArticles(prev => ({
-                              ...prev,
-                              "ClimaTempoOsasco": !prev["ClimaTempoOsasco"]
-                            }));
+                            setCopiedToast(`Link copiado de ${profile.username}`);
+                            setTimeout(() => setCopiedToast(null), 3000);
                           }}
-                          className="transition active:scale-75 focus:outline-none"
+                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-green-400 transition active:scale-75 focus:outline-none"
                         >
-                          <svg viewBox="0 0 24 24" fill={bookmarkedArticles["ClimaTempoOsasco"] ? "#f59e0b" : "none"} stroke={bookmarkedArticles["ClimaTempoOsasco"] ? "#f59e0b" : "#1c1917"} strokeWidth="2.5" className="w-5 h-5">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                          </svg>
+                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="w-4.5 h-4.5">
+                              <line x1="22" y1="2" x2="11" y2="13" />
+                              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
+                          </div>
+                          <span className="text-[5.5px] font-black uppercase font-mono tracking-tighter text-white/80 leading-none">Enviar</span>
                         </button>
-                      </div>
 
-                      {/* Display like metadata content */}
-                      <p className="text-[8.5px] text-stone-500 font-bold leading-none mt-1 text-left select-none">
-                        ♥ Curtido por <span className="text-stone-900">morador_osasco</span> e <span className="text-stone-900">outros {likedArticles["ClimaTempoOsasco"] ? 1421 : 1420} moradores</span>
-                      </p>
-
-                      <div className="text-[9px] text-stone-850 font-sans leading-normal font-medium mt-0.5 text-left">
-                        <span className="font-extrabold text-stone-950 mr-1.5">clima_tempo_osasco</span>
-                        Temperatura estável na região metropolitana com ventilação litorânea trazendo umidade e queda gradual de sensação térmica à noite. #ClimaOsasco #Previsão #TempoReal
-                      </div>
-
-                      <button 
-                        onClick={() => setActiveCommentsPost("clima-osasco-post")}
-                        className="text-[8px] font-sans font-semibold text-stone-400 hover:text-stone-650 transition text-left tracking-tight mt-1 self-start focus:outline-none"
-                      >
-                        Ver todos os {commentsState["clima-osasco-post"]?.length || 3} comentários
-                      </button>
-                    </div>
-                  )}
-
-                  {/* ACTIVE FEED NEWS POST ARTICLES LIST */}
-                  {filteredArticles.length === 0 ? (
-                    <div className="bg-white rounded-2xl py-8 px-4 text-center border border-stone-200">
-                      <span className="text-3xl block">🔎</span>
-                      <p className="text-[11px] font-bold text-stone-500 mt-2 font-mono uppercase tracking-tight">Nenhuma publicação encontrada</p>
-                      <p className="text-[8px] text-stone-400 mt-1 font-sans">Tente digitar outros termos na barra acima</p>
-                    </div>
-                  ) : (
-                    filteredArticles.map((art, idx) => {
-                      const profile = getSourceProfile(slide, art.source);
-                      const isLiked = !!likedArticles[art.title];
-                      const isBookmarked = !!bookmarkedArticles[art.title];
-                      const commentsList = commentsState[art.title] || [];
-                      
-                      return (
-                        <div 
-                          key={art.title + idx}
-                          className="bg-white border border-stone-200/90 rounded-2xl py-3 px-3 shadow-2xs flex flex-col gap-2 relative transition-all duration-300 pointer-events-auto"
+                        <button 
+                          onClick={() => {
+                            setBookmarkedArticles(prev => ({ ...prev, [item.title]: !prev[item.title] }));
+                          }}
+                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-amber-400 transition active:scale-75 focus:outline-none"
                         >
-                          {/* Post Card Header */}
-                          <div className="flex items-center justify-between border-b border-stone-100 pb-1.5 select-none">
-                            <div className="flex items-center gap-2">
-                              {/* Story outline ring */}
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] p-[1.5px] flex items-center justify-center shrink-0 overflow-hidden">
-                                <div className="bg-white w-full h-full rounded-full p-[1px] flex items-center justify-center overflow-hidden">
-                                  <img
-                                    src={profile.avatar}
-                                    alt={profile.displayName}
-                                    className="w-full h-full rounded-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                </div>
-                              </div>
-                              <div className="text-left leading-none font-sans">
-                                <div className="flex items-center gap-0.5">
-                                  <span className="text-[9.5px] font-black text-stone-900">{profile.username}</span>
-                                  {profile.verified && (
-                                    <span className="text-[8px] text-[#0095f6]" title="Canal Oficial">✓</span>
-                                  )}
-                                </div>
-                                <span className="text-[7.2px] text-stone-400 font-bold block mt-0.5 font-mono uppercase">
-                                  {art.source}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <span className="text-[7.5px] text-stone-400 font-bold font-mono tracking-tighter shrink-0 select-none">
-                              {art.time}
-                            </span>
+                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
+                            <svg viewBox="0 0 24 24" fill={bookmarkedArticles[item.title] ? "#f59e0b" : "none"} stroke={bookmarkedArticles[item.title] ? "#f59e0b" : "#ffffff"} strokeWidth="2.5" className="w-4.5 h-4.5">
+                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
                           </div>
+                          <span className="text-[5.5px] font-black uppercase font-mono tracking-tighter text-white/80 leading-none">Placar</span>
+                        </button>
 
-                          <div className="flex select-none">
-                            <span className={`text-[7px] font-mono font-black italic tracking-wider py-0.5 px-2 rounded-md ${art.badgeColor || 'bg-stone-50 text-stone-800 border'}`}>
-                              {art.badge}
-                            </span>
-                          </div>
-
-                          {/* Cover Image from the Article */}
-                          <div className="relative overflow-hidden rounded-xl border border-stone-100">
-                            <img
-                              src={art.image}
-                              alt={art.title}
-                              className="w-full h-40 object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent pointer-events-none" />
-                          </div>
-
-                          {/* Post Buttons Actions Bar */}
-                          <div className="flex justify-between items-center pt-1 border-t border-stone-100 select-none">
-                            <div className="flex gap-3">
-                              <button 
-                                onClick={() => {
-                                  setLikedArticles(prev => ({
-                                    ...prev,
-                                    [art.title]: !prev[art.title]
-                                  }));
-                                }}
-                                className="transition active:scale-75 focus:outline-none"
-                              >
-                                <svg 
-                                  viewBox="0 0 24 24" 
-                                  fill={isLiked ? "#ef4444" : "none"} 
-                                  stroke={isLiked ? "#ef4444" : "#1c1917"} 
-                                  strokeWidth="2.5" 
-                                  className="w-5 h-5 hover:text-red-500 transition duration-150"
-                                >
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                </svg>
-                              </button>
-                              
-                              <button 
-                                onClick={() => setActiveCommentsPost(art.title)}
-                                className="transition active:scale-75 focus:outline-none"
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5 hover:text-blue-500 transition duration-150">
-                                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                                </svg>
-                              </button>
-
-                              <button 
-                                onClick={() => {
-                                  alert(`Link copiado com sucesso! Compartilhe o canal ${profile.username}`);
-                                }}
-                                className="transition active:scale-75 focus:outline-none"
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5 hover:text-green-500 transition duration-150">
-                                  <line x1="22" y1="2" x2="11" y2="13" />
-                                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                </svg>
-                              </button>
-                            </div>
-
-                            <button 
-                              onClick={() => {
-                                setBookmarkedArticles(prev => ({
-                                  ...prev,
-                                  [art.title]: !prev[art.title]
-                                }));
-                              }}
-                              className="transition active:scale-75 focus:outline-none"
-                            >
-                              <svg 
-                                viewBox="0 0 24 24" 
-                                fill={isBookmarked ? "#f59e0b" : "none"} 
-                                stroke={isBookmarked ? "#f59e0b" : "#1c1917"} 
-                                strokeWidth="2.5" 
-                                className="w-5 h-5 hover:text-amber-500 transition duration-150"
-                              >
-                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                              </svg>
-                            </button>
-                          </div>
-
-                          {/* Likes Metadata */}
-                          <p className="text-[8.5px] text-stone-500 font-bold leading-none mt-1 text-left select-none">
-                            ♥ Curtido por <span className="text-stone-900">osasco_city</span> e <span className="text-stone-900">outros {isLiked ? 1421 : 1420} moradores</span>
-                          </p>
-
-                          {/* Narrative Caption text */}
-                          <div className="text-[9px] text-stone-850 font-sans leading-normal font-medium mt-0.5 text-left">
-                            <span className="font-black text-stone-950 mr-1.5 select-all">{profile.username}</span>
-                            <span className="font-extrabold text-stone-900 tracking-tight block text-[10px] uppercase my-1 select-all">
-                              {art.title}
-                            </span>
-                            <span className="text-stone-600 block text-[9px] leading-normal select-all">
-                              {art.subtitle}
-                            </span>
-                            <span className="text-blue-600 font-mono text-[7.5px] font-bold block mt-1 select-none">
-                              #osasco #regiaooeste #noticias #{profile.username}
-                            </span>
-                          </div>
-
-                          {/* comments count link */}
-                          <button 
-                            onClick={() => setActiveCommentsPost(art.title)}
-                            className="text-[8px] font-sans font-semibold text-stone-400 hover:text-stone-650 transition text-left tracking-tight mt-1 self-start focus:outline-none"
-                          >
-                            Ver todos os {commentsList.length > 0 ? commentsList.length : 2} comentários
-                          </button>
+                        <div className="mt-1 text-white/25 text-[8px] animate-pulse flex flex-col items-center">
+                          <span className="text-[5px] font-bold font-mono uppercase tracking-tighter text-white/60">Arraste</span>
+                          <span>▲</span>
                         </div>
-                      );
-                    })
-                  )}
-
-                </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </motion.div>
             )}
+          </AnimatePresence>
 
+          {/* Floating Navigation Controls Overlay */}
+          {(slide === "weather" || slide.startsWith("news-")) && (
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 z-20 pointer-events-auto select-none">
+              <button
+                onClick={() => setActiveIndex(curr => Math.max(0, curr - 1))}
+                disabled={activeIndex === 0}
+                className={`w-7 h-7 rounded-full bg-black/55 hover:bg-black/85 border border-white/15 flex items-center justify-center text-[10px] font-extrabold text-white transition active:scale-90 focus:outline-none cursor-pointer ${activeIndex === 0 ? "opacity-30 cursor-not-allowed" : ""}`}
+                title="Anterior"
+              >
+                ▲
+              </button>
+              <button
+                onClick={() => setActiveIndex(curr => (curr + 1) % reelsFeed.length)}
+                className="w-7 h-7 rounded-full bg-black/55 hover:bg-black/85 border border-white/15 flex items-center justify-center text-[10px] font-extrabold text-white transition active:scale-90 focus:outline-none cursor-pointer"
+                title="Próximo"
+              >
+                ▼
+              </button>
+            </div>
+          )}
+
+          {/* TOAST SYSTEM */}
+          <AnimatePresence>
+            {copiedToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 15 }}
+                className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-blue-600 text-white font-sans text-[8.5px] font-black px-4 py-2 rounded-full shadow-2xl z-40 flex items-center gap-1.5 select-none"
+              >
+                <span>📬</span> {copiedToast}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait" initial={false}>
             {(slide === "bus-035" || slide === "bus-034" || slide === "bus-466x1") && (
               <motion.div
                 key={slide}
