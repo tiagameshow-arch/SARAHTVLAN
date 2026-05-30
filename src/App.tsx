@@ -749,6 +749,10 @@ export default function App() {
   // Selected monitor to manage/view in the remote and simulation tabs
   const [selectedMonitorId, setSelectedMonitorId] = useState<string>("terminal-principal");
 
+  // Visual Simulator Layout States (Standard or smartphone vertical hybrid)
+  const [simulatorLayout, setSimulatorLayout] = useState<"standard" | "vertical-hybrid">("standard");
+  const [phonePosition, setPhonePosition] = useState<"top" | "bottom">("top");
+
   // Local draft states inside the remote control panel
   const [temperatureInput, setTemperatureInput] = useState(tvState.temperature ?? "");
   const [newsInput, setNewsInput] = useState(tvState.newsTicker ?? "");
@@ -884,6 +888,9 @@ export default function App() {
 
     // Attempt playback of sound on first user touch/tap to gain media key focus on phones
     const tryPlayingMedia = () => {
+      try {
+        window.focus();
+      } catch (err) {}
       if (localVolumeAudioRef.current) {
         localVolumeAudioRef.current.play().catch(() => {});
       }
@@ -2071,6 +2078,75 @@ export default function App() {
               transition={{ duration: 0.25 }}
               className="flex flex-col gap-4 py-2"
             >
+              {/* LAYOUT SELECTOR CONTROL BAR FOR HIGH QUALITY USER INTENT */}
+              <div className="bg-stone-950/80 border border-stone-850/80 p-4 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl select-none">
+                <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                  <span className="text-stone-100 font-sans text-xs font-black uppercase tracking-wider flex items-center gap-2 leading-none">
+                    📐 MODO DE VISUALIZAÇÃO DO SIMULADOR (ROTAÇÃO DE TELA)
+                  </span>
+                  <span className="text-stone-400 text-[10px] font-sans font-medium mt-1 leading-normal max-w-lg">
+                    Escolha "Híbrido Vertical" se estiver visualizando em um smartphone em pé. O celular de simulação ficará deitado (horizontal) e a TV ficará em pé (9:16 vertical) para reproduzir vídeos verticais!
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5 justify-center">
+                  <div className="flex bg-stone-900 border border-stone-800 p-1 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSimulatorLayout("standard")}
+                      className={`px-4 py-2 rounded-lg text-[9.5px] font-extrabold tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-1.5 ${
+                        simulatorLayout === "standard"
+                          ? "bg-[#1e293b] text-cyan-200 border border-[#334155]/60 shadow-[0_2px_6px_rgba(0,0,0,0.3)] scale-[1.02]"
+                          : "text-stone-400 hover:text-stone-200"
+                      }`}
+                    >
+                      <Tv className="w-3.5 h-3.5 animate-pulse" />
+                      LADO A LADO (DEITO)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSimulatorLayout("vertical-hybrid")}
+                      className={`px-4 py-2 rounded-lg text-[9.5px] font-extrabold tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-1.5 ${
+                        simulatorLayout === "vertical-hybrid"
+                          ? "bg-[#10b981] text-white border border-[#10b981]/60 shadow-[0_2px_6px_rgba(16,185,129,0.3)] scale-[1.02]"
+                          : "text-stone-400 hover:text-stone-200"
+                      }`}
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      HÍBRIDO VERTICAL
+                    </button>
+                  </div>
+
+                  {simulatorLayout === "vertical-hybrid" && (
+                    <div className="flex items-center gap-1 bg-stone-900 border border-stone-800 p-1 rounded-xl shrink-0">
+                      <span className="text-stone-400 text-[8.5px] font-mono font-black uppercase px-2">Celular:</span>
+                      <button
+                        type="button"
+                        onClick={() => setPhonePosition("top")}
+                        className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase transition-all duration-150 ${
+                          phonePosition === "top"
+                            ? "bg-[#1e293b] text-cyan-250 shadow"
+                            : "text-stone-400 hover:text-white"
+                        }`}
+                      >
+                        ▲ NO TOPO
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPhonePosition("bottom")}
+                        className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase transition-all duration-150 ${
+                          phonePosition === "bottom"
+                            ? "bg-[#1e293b] text-cyan-255 shadow"
+                            : "text-stone-400 hover:text-white"
+                        }`}
+                      >
+                        ▼ NA BASE
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* IMMERSIVE 3D SIMULATED ENVIRONMENT CONTAINER */}
               <div 
                 className="relative w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-stone-800 bg-cover bg-center min-h-[640px] flex items-center justify-center p-4 sm:p-8 transition-all duration-700 select-none pb-12 pt-16"
@@ -2084,18 +2160,38 @@ export default function App() {
                 <div className="absolute bottom-24 left-1/3 w-[50%] h-48 bg-emerald-500/10 filter blur-[90px] rounded-full pointer-events-none mix-blend-screen" />
 
                 {/* THE SIMULATION WORKSPACE SANDBOX */}
-                <div className="relative w-full max-w-6xl flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 z-10 py-6">
+                <div className={`relative w-full max-w-6xl z-10 py-6 flex ${
+                  simulatorLayout === "vertical-hybrid"
+                    ? "flex-col items-center justify-start gap-12"
+                    : "flex-col md:flex-row items-center justify-center gap-6 md:gap-12"
+                }`}>
                   
                   {/* Left Layer: Cellphone with adjust offsets */}
                   <div 
-                    className="transition-transform duration-100 ease-out z-20 flex justify-center w-full md:w-auto"
+                    className={`transition-all duration-300 ease-out z-20 flex justify-center w-full md:w-auto ${
+                      simulatorLayout === "vertical-hybrid"
+                        ? phonePosition === "top" ? "order-1" : "order-3"
+                        : "order-1"
+                    }`}
                     style={{ 
                       transform: `translate(${phoneX}px, ${phoneY}px) scale(${phoneScale})`,
                       filter: "drop-shadow(0 25px 40px rgba(0,0,0,0.9))"
                     }}
                   >
-                    <div className="w-full max-w-[275px] shrink-0">
-                      {renderPassengerPhone(tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0])}
+                    <div className={`relative flex items-center justify-center transition-all ${
+                      simulatorLayout === "vertical-hybrid"
+                        ? "w-[300px] h-[320px]" // Landscaped envelopes bounds
+                        : "w-full max-w-[275px] shrink-0"
+                    }`}>
+                      <div 
+                        className={`transition-all duration-300 ${
+                          simulatorLayout === "vertical-hybrid"
+                            ? "origin-center -rotate-90 scale-[0.55] sm:scale-[0.62] absolute"
+                            : "w-full"
+                        }`}
+                      >
+                        {renderPassengerPhone(tvState.monitors.find(m => m.id === selectedMonitorId) || tvState.monitors[0])}
+                      </div>
                     </div>
                   </div>
 
@@ -2106,7 +2202,11 @@ export default function App() {
                     const activeVideoId = activeMonitorObj.playlist[activeMonitorObj.currentVideoIndex] || "ysz5S6PUM-U";
                     return (
                       <div 
-                        className="transition-transform duration-100 ease-out z-10 flex flex-col items-center w-full"
+                        className={`transition-all duration-300 ease-out z-10 flex flex-col items-center w-full ${
+                          simulatorLayout === "vertical-hybrid"
+                            ? phonePosition === "bottom" ? "order-1" : "order-2"
+                            : "order-2"
+                        }`}
                         style={{ 
                           transform: `translate(${tvX}px, ${tvY}px) scale(${tvScale})`,
                           filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.95))"
@@ -2125,8 +2225,8 @@ export default function App() {
 
                           {/* Widescreen Simulated Physical TV Frame with dynamic controls */}
                           <div className={`relative bg-[#050505] border-[11px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden flex flex-col justify-between items-stretch transition-all duration-300 ${
-                            activeMonitorObj.orientation === "portrait"
-                              ? "aspect-[9/16] w-[220px] sm:w-[320px] md:w-[360px] lg:w-[410px] xl:w-[460px]"
+                            simulatorLayout === "vertical-hybrid" || activeMonitorObj.orientation === "portrait"
+                              ? "aspect-[9/16] w-[210px] sm:w-[280px] md:w-[320px] lg:w-[360px]"
                               : "aspect-video w-[340px] sm:w-[560px] md:w-[690px] lg:w-[780px] xl:w-[910px]"
                           }`}>
                             
