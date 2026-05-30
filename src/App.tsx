@@ -496,11 +496,11 @@ export default function App() {
   // Custom video input inside the mobile phone remote control
   const [newPhoneVideoInput, setNewPhoneVideoInput] = useState<string>("");
 
-  // Slide state inside the phone remote controller: rotates between "weather" and "transit" (bus stop schedules)
-  const [phoneRotateSlide, setPhoneRotateSlide] = useState<"weather" | "transit">("weather");
-
   // Slide state inside the passenger cellphone: rotates between weather, individual buses, and live news portals
   const [passengerScreenSlide, setPassengerScreenSlide] = useState<string>("weather");
+
+  // Ref container for silent audio element used to capture physical volume changes on mobile devices
+  const localVolumeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // URL mode selector (supports full-screen preview modes: TV standalone or passenger phone standalone)
   const [urlMode, setUrlMode] = useState<string | null>(() => {
@@ -792,7 +792,7 @@ export default function App() {
     syncMonitorsToServer(updated);
   };
 
-  // Keyboard and physical volume adjustments effect
+  // Keyboard and physical hardware volume adjustments effect (Supports keys & native mobile volume buttons)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't intercept if user is typing in a form input or textarea
@@ -831,10 +831,95 @@ export default function App() {
     };
 
     window.addEventListener("keydown", handleKeyDown);
+
+    // Dynamic physical smartphone button syncing via silent audio channel volume capture
+    if (typeof window !== "undefined") {
+      if (!localVolumeAudioRef.current) {
+        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD");
+        audio.loop = true;
+        audio.volume = 0.8;
+
+        audio.addEventListener("volumechange", () => {
+          let tId = null;
+          if (urlMode === "tv") {
+            tId = urlMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+          } else if (activeTab === "monitor" && activePreviewMonitorId !== "grid") {
+            tId = activePreviewMonitorId;
+          } else {
+            tId = selectedMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+          }
+          if (!tId) return;
+
+          const currentMonitor = tvStateRef.current.monitors.find(m => m.id === tId);
+          if (!currentMonitor) return;
+
+          const newVolumePercent = Math.round(audio.volume * 100);
+          const currentVol = typeof currentMonitor.volume === "number" ? currentMonitor.volume : (currentMonitor.mute ? 0 : 80);
+
+          if (Math.abs(newVolumePercent - currentVol) >= 1) {
+            handleUpdateVolume(tId, newVolumePercent);
+          }
+        });
+
+        // Initialize audio's float volume value to match active states
+        let tId = null;
+        if (urlMode === "tv") {
+          tId = urlMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+        } else if (activeTab === "monitor" && activePreviewMonitorId !== "grid") {
+          tId = activePreviewMonitorId;
+        } else {
+          tId = selectedMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+        }
+        if (tId) {
+          const currentMonitor = tvStateRef.current.monitors.find(m => m.id === tId);
+          if (currentMonitor) {
+            const vol = typeof currentMonitor.volume === "number" ? currentMonitor.volume : (currentMonitor.mute ? 0 : 80);
+            audio.volume = vol / 100;
+          }
+        }
+
+        localVolumeAudioRef.current = audio;
+      }
+    }
+
+    // Attempt playback of sound on first user touch/tap to gain media key focus on phones
+    const tryPlayingMedia = () => {
+      if (localVolumeAudioRef.current) {
+        localVolumeAudioRef.current.play().catch(() => {});
+      }
+    };
+
+    window.addEventListener("click", tryPlayingMedia, { passive: true });
+    window.addEventListener("touchstart", tryPlayingMedia, { passive: true });
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("click", tryPlayingMedia);
+      window.removeEventListener("touchstart", tryPlayingMedia);
     };
   }, [urlMode, urlMonitorId, activeTab, activePreviewMonitorId, selectedMonitorId]);
+
+  // Keep silence audio volume property in sync when volume is updated externally (e.g. from sliders or buttons)
+  useEffect(() => {
+    let tId = null;
+    if (urlMode === "tv") {
+      tId = urlMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+    } else if (activeTab === "monitor" && activePreviewMonitorId !== "grid") {
+      tId = activePreviewMonitorId;
+    } else {
+      tId = selectedMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+    }
+    if (!tId) return;
+
+    const currentMonitor = tvState.monitors.find(m => m.id === tId);
+    if (currentMonitor && localVolumeAudioRef.current) {
+      const vol = typeof currentMonitor.volume === "number" ? currentMonitor.volume : (currentMonitor.mute ? 0 : 80);
+      const volFloat = vol / 100;
+      if (Math.abs(localVolumeAudioRef.current.volume - volFloat) >= 0.01) {
+        localVolumeAudioRef.current.volume = volFloat;
+      }
+    }
+  }, [tvState.monitors, selectedMonitorId, activeTab, activePreviewMonitorId, urlMode, urlMonitorId]);
   
   // Custom audio integration for MATCH DAY / SONOPLASTIA
   const [localSpeechText, setLocalSpeechText] = useState("Atenção passageiros do Parque Palmares! Ônibus linha 035 se aproxima do terminal.");
@@ -1015,14 +1100,6 @@ export default function App() {
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Phone remote local info rotation machine
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhoneRotateSlide(prev => prev === "weather" ? "transit" : "weather");
-    }, 4500); // alternating every 4.5 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -2380,41 +2457,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Simplified Live local Info Panel (Bus Departures Only, Weather Removed) */}
-        <div className="bg-black/85 border border-[#10b981]/15 rounded-xl p-2.5 mb-3.5 text-left relative overflow-hidden shadow-inner font-sans">
-          <div className="absolute right-2 top-2 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-            <span className="text-[5.5px] font-mono text-stone-500 uppercase tracking-widest">PARTIDAS EM TEMPO REAL</span>
-          </div>
-
-          <div>
-            <span className="text-[7.5px] font-mono font-bold text-emerald-400 uppercase tracking-widest leading-none block">
-              PARTIDAS NA LOCALIDADE DA TELA
-            </span>
-            <p className="text-[8px] text-stone-400 mt-1 leading-tight uppercase font-extrabold tracking-tight truncate max-w-[270px]">
-              Ponto: <span className="text-white">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
-            </p>
-
-            <div className="flex flex-wrap gap-1 mt-2">
-              {(activeMonitor?.customBusLines || "035/034/466X1").split('/').map((line, i) => {
-                const cleanLine = line.trim();
-                if (!cleanLine) return null;
-                const time = getLineTime(cleanLine);
-                return (
-                  <div key={i} className="bg-stone-950 border border-emerald-500/15 rounded-md px-1.5 py-1 flex items-center gap-1 shrink-0">
-                    <span className="bg-yellow-405 text-stone-950 font-mono text-[7.5px] px-1 py-0.2 rounded font-black leading-none">
-                      {cleanLine}
-                    </span>
-                    <span className="text-[7.5px] font-mono font-bold text-stone-300">
-                      {time}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
         {/* Sleek Tab Bar inside the cell phone screen area with active glow status borders */}
         <div className="grid grid-cols-3 gap-0.5 mb-3.5 bg-black/85 p-1 rounded-xl border border-[#10b981]/15">
           <button
@@ -2748,7 +2790,7 @@ export default function App() {
               OPÇÕES DO MONITOR ATIVO
             </span>
 
-            {/* In-Phone Options Form (Name, Location, Bus Lines) */}
+            {/* In-Phone Options Form (Name Only, Location and Bus Lines Removed) */}
             <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2">
               <div>
                 <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
@@ -2760,19 +2802,6 @@ export default function App() {
                   onChange={(e) => setRenameValue(e.target.value)}
                   placeholder="Nome do monitor..."
                   className="w-full mt-1 bg-[#020d08] border border-[#212121] text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
-                />
-              </div>
-
-              <div>
-                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block">
-                  📍 Ponto / Rua / Localização Física
-                </label>
-                <input
-                  type="text"
-                  value={locationValue}
-                  onChange={(e) => setLocationValue(e.target.value)}
-                  placeholder="Ex: Av. Zumbi dos Palmares..."
-                  className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
                 />
               </div>
 
