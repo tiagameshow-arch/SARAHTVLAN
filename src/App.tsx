@@ -806,8 +806,8 @@ export default function App() {
         targetId = urlMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
       } else if (activeTab === "monitor" && activePreviewMonitorId !== "grid") {
         targetId = activePreviewMonitorId;
-      } else if (selectedMonitorId) {
-        targetId = selectedMonitorId;
+      } else {
+        targetId = selectedMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
       }
 
       if (!targetId) return;
@@ -818,13 +818,13 @@ export default function App() {
       // Default to 80 if volume is not defined and is not muted
       const currentVol = typeof currentMonitor.volume === "number" ? currentMonitor.volume : (currentMonitor.mute ? 0 : 80);
 
-      // Volume Up keys
-      if (e.key === "AudioVolumeUp" || e.key === "VolumeUp" || e.key === "ArrowUp") {
+      // Volume Up keys (including physical Android volume keycode 24)
+      if (e.key === "AudioVolumeUp" || e.key === "VolumeUp" || e.key === "ArrowUp" || e.keyCode === 24 || e.which === 24) {
         e.preventDefault();
         handleUpdateVolume(targetId, currentVol + 5);
       }
-      // Volume Down keys
-      else if (e.key === "AudioVolumeDown" || e.key === "VolumeDown" || e.key === "ArrowDown") {
+      // Volume Down keys (including physical Android volume keycode 25)
+      else if (e.key === "AudioVolumeDown" || e.key === "VolumeDown" || e.key === "ArrowDown" || e.keyCode === 25 || e.which === 25) {
         e.preventDefault();
         handleUpdateVolume(targetId, currentVol - 5);
       }
@@ -2380,69 +2380,37 @@ export default function App() {
           </div>
         </div>
 
-        {/* Rotating Live local Info Panel (Alternando entre Tempo e Ônibus Local!) */}
+        {/* Simplified Live local Info Panel (Bus Departures Only, Weather Removed) */}
         <div className="bg-black/85 border border-[#10b981]/15 rounded-xl p-2.5 mb-3.5 text-left relative overflow-hidden shadow-inner font-sans">
           <div className="absolute right-2 top-2 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-yellow-405 rounded-full animate-ping" />
-            <span className="text-[5.5px] font-mono text-stone-500 uppercase tracking-widest">LIVE ROTATOR</span>
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+            <span className="text-[5.5px] font-mono text-stone-500 uppercase tracking-widest">PARTIDAS EM TEMPO REAL</span>
           </div>
 
-          {phoneRotateSlide === "weather" ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[7.5px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none block">
-                  CÉU & CLIMA (OSASCO)
-                </span>
-                <span className="text-xs font-sans font-black text-white mt-1.5 block uppercase tracking-tight">
-                  {tvState.temperature}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 select-none shrink-0 bg-[#021c10]/40 border border-[#10b981]/15 px-2 py-1 rounded-lg">
-                <span className="text-lg">☀️</span>
-                <span className="text-[7.5px] font-mono text-emerald-400 font-extrabold uppercase">HUM. 85%</span>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <span className="text-[7.5px] font-mono font-bold text-emerald-400 uppercase tracking-widest leading-none block">
-                PARTIDAS NA LOCALIDADE DA TELA
-              </span>
-              <p className="text-[8px] text-stone-400 mt-1 leading-tight uppercase font-extrabold tracking-tight truncate max-w-[270px]">
-                Ponto: <span className="text-white">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
-              </p>
+          <div>
+            <span className="text-[7.5px] font-mono font-bold text-emerald-400 uppercase tracking-widest leading-none block">
+              PARTIDAS NA LOCALIDADE DA TELA
+            </span>
+            <p className="text-[8px] text-stone-400 mt-1 leading-tight uppercase font-extrabold tracking-tight truncate max-w-[270px]">
+              Ponto: <span className="text-white">{activeMonitor?.location || "Avenida Zumbi dos Palmares"}</span>
+            </p>
 
-              <div className="flex flex-wrap gap-1 mt-2">
-                {(activeMonitor?.customBusLines || "035/034/466X1").split('/').map((line, i) => {
-                  const cleanLine = line.trim();
-                  if (!cleanLine) return null;
-                  const time = getLineTime(cleanLine);
-                  return (
-                    <div key={i} className="bg-stone-950 border border-emerald-500/15 rounded-md px-1.5 py-1 flex items-center gap-1 shrink-0">
-                      <span className="bg-yellow-405 text-stone-950 font-mono text-[7.5px] px-1 py-0.2 rounded font-black leading-none">
-                        {cleanLine}
-                      </span>
-                      <span className="text-[7.5px] font-mono font-bold text-stone-300">
-                        {time}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Quick manual Toggle Button & bar pagination */}
-          <div className="flex justify-between items-center mt-2 border-t border-emerald-500/10 pt-1.5 text-[6.5px] font-mono text-stone-500">
-            <button
-              type="button"
-              onClick={() => setPhoneRotateSlide(prev => prev === "weather" ? "transit" : "weather")}
-              className="hover:text-amber-400 transition flex items-center gap-0.5 select-none cursor-pointer font-bold leading-none"
-            >
-              🔄 ALTERAR WIDGET
-            </button>
-            <div className="flex gap-1">
-              <span className={phoneRotateSlide === "weather" ? "text-yellow-400" : "text-stone-700"}>●</span>
-              <span className={phoneRotateSlide === "transit" ? "text-emerald-400" : "text-stone-700"}>●</span>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {(activeMonitor?.customBusLines || "035/034/466X1").split('/').map((line, i) => {
+                const cleanLine = line.trim();
+                if (!cleanLine) return null;
+                const time = getLineTime(cleanLine);
+                return (
+                  <div key={i} className="bg-stone-950 border border-emerald-500/15 rounded-md px-1.5 py-1 flex items-center gap-1 shrink-0">
+                    <span className="bg-yellow-405 text-stone-950 font-mono text-[7.5px] px-1 py-0.2 rounded font-black leading-none">
+                      {cleanLine}
+                    </span>
+                    <span className="text-[7.5px] font-mono font-bold text-stone-300">
+                      {time}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -2806,53 +2774,6 @@ export default function App() {
                   placeholder="Ex: Av. Zumbi dos Palmares..."
                   className="w-full mt-1 bg-[#020d08] border border-stone-850 text-[10px] font-bold px-2 py-1.5 rounded-xl text-white focus:outline-none focus:border-yellow-450 font-sans"
                 />
-              </div>
-
-              <div>
-                <label className="text-[7.5px] text-stone-405 font-extrabold uppercase tracking-wide block mb-1.5">
-                  🚌 Acesso às Linhas (Ativar/Desativar)
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 mb-1">
-                  {["035", "034", "466X1"].map((lineNum) => {
-                    const linesArray = customBusLinesValue
-                      .split("/")
-                      .map(l => l.trim().toUpperCase())
-                      .filter(Boolean);
-                    const isEnabled = linesArray.includes(lineNum);
-
-                    const handleToggle = () => {
-                      let nextLines: string[];
-                      if (isEnabled) {
-                        nextLines = linesArray.filter(l => l !== lineNum);
-                      } else {
-                        nextLines = [...linesArray, lineNum];
-                      }
-                      const orderedLines = ["035", "034", "466X1"].filter(l => nextLines.includes(l));
-                      const newValue = orderedLines.join("/");
-                      setCustomBusLinesValue(newValue);
-                    };
-
-                    return (
-                      <button
-                        key={lineNum}
-                        type="button"
-                        onClick={handleToggle}
-                        className={`py-2 px-1 rounded-xl text-[9px] font-black uppercase transition-all duration-150 border text-center ${
-                          isEnabled
-                            ? "bg-emerald-950/80 text-emerald-450 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
-                            : "bg-stone-900/50 text-stone-550 border-stone-850/60"
-                        }`}
-                      >
-                        <span className="block text-[11px] font-mono leading-none mb-1">{lineNum}</span>
-                        <span className={`text-[6px] font-bold px-1 py-0.2 rounded-sm ${
-                          isEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-stone-950 text-stone-500"
-                        }`}>
-                          {isEnabled ? "HABILITADO" : "DESATIVADO"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               <button
