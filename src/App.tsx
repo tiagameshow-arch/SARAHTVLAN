@@ -2769,6 +2769,7 @@ export default function App() {
         activeMonitor={monitorObj}
         slide={passengerScreenSlide}
         setSlide={setPassengerScreenSlide}
+        getLineTime={getLineTime}
       />
     );
   }
@@ -2780,6 +2781,7 @@ interface PassengerPhoneProps {
   activeMonitor?: any;
   slide?: string;
   setSlide?: (slide: string) => void;
+  getLineTime: (lineNumber: string) => string;
 }
 
 const SLIDES_SEQUENCE = [
@@ -2964,7 +2966,8 @@ function PassengerPhone({
   getWeatherIcon, 
   activeMonitor,
   slide: propSlide,
-  setSlide: propSetSlide
+  setSlide: propSetSlide,
+  getLineTime
 }: PassengerPhoneProps) {
   const [localSlide, setLocalSlide] = useState<string>("weather");
   const [isAutoplay, setIsAutoplay] = useState<boolean>(true);
@@ -2976,6 +2979,108 @@ function PassengerPhone({
   
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Pre-filled comments state for interactive articles
+  const [commentsState, setCommentsState] = useState<Record<string, Array<{ id: string; username: string; text: string; time: string }>>>({
+    "clima-osasco-post": [
+      { id: "1", username: "pedro_oz", text: "Finalmente um clima fresquinho em SP!", time: "Há 1 min" },
+      { id: "2", username: "ana_clara", text: "Moro no Km 18 e o vento tá bem forte aqui!", time: "Há 5 min" },
+      { id: "3", username: "junior_palmares", text: "Tempo perfeito pra comer um pastel na feira amanhã 🥟", time: "Há 10 min" }
+    ],
+    "AVENIDA ZUMBI DOS PALMARES RECEBE NOVO RECAPEAMENTO COMPLETO E LUZ INTEGRAL LED": [
+      { id: "1", username: "morador_feliz", text: "Até que enfim! Os buracos ali tavam parecendo crateras da lua.", time: "Há 3 min" },
+      { id: "2", username: "marcelo_moraes", text: "O asfalto ficou lisinho, excelente trabalho da prefeitura local.", time: "Há 12 min" },
+      { id: "3", username: "leticia_silva", text: "O LED branco à noite dá outra sensação de segurança. Parabéns!", time: "Há 1 hora" }
+    ],
+    "FEIRA CULTURAL DE DOMINGO NA ZUMBI DOS PALMARES REÚNE PÚBLICO RECORDE COM PASTÉIS E ARTESANATO": [
+      { id: "1", username: "pastel_fanatic", text: "O pastel da barraca da Zefa tá concorridíssimo, vale cada minuto de fila!", time: "Há 25 min" },
+      { id: "2", username: "renato_santos", text: "Música de qualidade e ambiente super familiar. Parabéns aos envolvidos!", time: "Há 1 hora" }
+    ],
+    "NOVA CRECHE INTEGRADA DO JARDIM PALMARES AMPLIA VAGAS PARA 250 BEBÊS DE MÃES TRABALHADORAS": [
+      { id: "1", username: "mae_bairro", text: "Que benção de Deus! Agora posso trabalhar tranquila sabendo que meu filho tá seguro.", time: "Há 42 min" },
+      { id: "2", username: "cristina_melo", text: "A estrutura ficou de primeiro mundo! Parabéns pela iniciativa.", time: "Há 3 horas" }
+    ],
+    "G1: FRENTE FRIA AVANÇA EM SP COM ALERTA DE CHUVA SEVERA E VENTOS DE ATÉ 60KM/H": [
+      { id: "1", username: "casaco_pronto", text: "Tirei o edredom do armário hoje mesmo kkkk haja frio!", time: "Há 1 min" },
+      { id: "2", username: "thiago_sp", text: "Marginal Pinheiros vai virar um rio se chover forte assim, cuidado pessoal.", time: "Há 12 min" }
+    ],
+    "GE: ABEL FERREIRA RETORNA COM TITULARES PESADOS E GARANTE TIME COM SEDE DE ATAQUE NO ALLIANZ": [
+      { id: "1", username: "verdao_desde_berço", text: "Abel é gênio! Allianz vai tremer hoje com os titulares!", time: "Há 8 min" },
+      { id: "2", username: "jorginho_alviverde", text: "Vamo ganhar do São Bernardo por 3 a 0 fácil kkkk rumo ao título!", time: "Há 15 min" }
+    ],
+    "CHOQUEI: CANTOR SERTANEJO MAIS TOCADO DO ANO É VISTO COM NOVA MODELO EM RESTAURANTE DE SP": [
+      { id: "1", username: "fofoqueira_mor", text: "GENTE! Passada de verdade kkkk a assessoria sempre nega no começo!", time: "Há 1 min" },
+      { id: "2", username: "juliana_souza", text: "Eu já desconfiava desde que eles postaram o mesmo storie no mesmo lugar semana passada! 👀", time: "Há 4 min" }
+    ],
+    "CANTORA GOSPEL ATINGE RECORDE DE 110 MILHÕES DE STREAMINGS E LANÇA SINGLE ACÚSTICO": [
+      { id: "1", username: "irmao_marcos", text: "Louvor abençoado! Essa melodia toca lá no fundo da alma 🙏", time: "Há 5 min" },
+      { id: "2", username: "gloria_paz", text: "Merecido demais! Ela canta com verdade no coração.", time: "Há 20 min" }
+    ]
+  });
+
+  const [activeCommentsPost, setActiveCommentsPost] = useState<string | null>(null);
+  const [newCommentText, setNewCommentText] = useState("");
+
+  const getSourceProfile = (slideKey: string, articleSource?: string) => {
+    const key = articleSource || slideKey;
+    if (key.includes("bairro") || key.includes("Bairro") || key.includes("Palmares") || key.includes("Leste") || key.includes("Voz")) {
+      return {
+        username: "bairro_palmares",
+        displayName: "Voz de Palmares • Bairro",
+        avatar: "https://images.unsplash.com/photo-1510227272981-87123e259b17?w=100&auto=format&fit=crop&q=80",
+        verified: true,
+        followers: "12.4K",
+        bio: "Notícias comunitárias e serviços públicos no Jardim Palmares e região"
+      };
+    }
+    if (key.includes("esportes") || key.includes("Esportes") || key.includes("ge") || key.includes("Tricolor") || key.includes("FUTEBOL")) {
+      return {
+        username: "osasco_esportes",
+        displayName: "GE Osasco Esportes",
+        avatar: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=100&auto=format&fit=crop&q=80",
+        verified: true,
+        followers: "44.9K",
+        bio: "Cobertura esportiva de Osasco, futebol paulista, várzea e basquete local"
+      };
+    }
+    if (key.includes("fofocas") || key.includes("Choquei") || key.includes("Léo Dias") || key.includes("Fofoquei")) {
+      return {
+        username: "osasco_fuxico",
+        displayName: "Fuxico Osasco Oficial",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+        verified: false,
+        followers: "89.1K",
+        bio: "Os bastidores das subcelebridades, polêmicas locais e babados da grande SP"
+      };
+    }
+    if (key.includes("gospel") || key.includes("Gospel") || key.includes("Pleno") || key.includes("União")) {
+      return {
+        username: "conexao_gospel_osasco",
+        displayName: "Conexão Gospel Osasco",
+        avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80",
+        verified: true,
+        followers: "18.2K",
+        bio: "Eventos, congressos, louvores e ações solidárias das igrejas em Osasco"
+      };
+    }
+    // Default / Geral
+    return {
+      username: "portal_osasco_news",
+      displayName: "Osasco Geral News",
+      avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100&auto=format&fit=crop&q=80",
+      verified: true,
+      followers: "105K",
+      bio: "O portal de notícias líder da região de Osasco e região metropolitana de SP"
+    };
+  };
+
+  const stories = [
+    { key: "news-bairro", profile: getSourceProfile("news-bairro"), label: "Bairro", icon: "🏡" },
+    { key: "news-geral", profile: getSourceProfile("news-geral"), label: "Portais", icon: "📰" },
+    { key: "news-esportes", profile: getSourceProfile("news-esportes"), label: "Esportes", icon: "⚽" },
+    { key: "news-fofocas", profile: getSourceProfile("news-fofocas"), label: "Fofocas", icon: "🔥" },
+    { key: "news-gospel", profile: getSourceProfile("news-gospel"), label: "Gospel", icon: "🙌" }
+  ];
 
   // News active offsets to cycle articles whenever returning to a slide!
   const [newsOffsets, setNewsOffsets] = useState<Record<string, number>>({
@@ -3156,7 +3261,7 @@ function PassengerPhone({
                   className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tight flex items-center gap-1 shrink-0 select-none transition-all duration-150 active:scale-95 border ${
                     isActive
                       ? "bg-slate-900 border-slate-950 text-white shadow-md font-bold scale-[1.03]"
-                      : "bg-white border-stone-205 text-stone-600 hover:bg-stone-55"
+                      : "bg-white border-stone-200 text-stone-600 hover:bg-stone-50"
                   }`}
                 >
                   <span className={`${accentColor} text-[10px]`}>{icon}</span>
@@ -3170,29 +3275,379 @@ function PassengerPhone({
         {/* COMPONENT BODY */}
         <div className="flex-grow z-10 overflow-y-auto max-h-[360px] h-[355px] scrollbar-none relative bg-[#f1f3f4] p-3 pt-1 flex flex-col gap-3">
           <AnimatePresence mode="wait" initial={false}>
-            {slide === "weather" && (
+            {(slide === "weather" || slide.startsWith("news-")) && (
               <motion.div
-                key="weather-block"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+                key={`feed-${slide}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="bg-gradient-to-br from-[#0a2342] to-[#123c69] border border-blue-900 rounded-2xl p-3.5 text-white shadow-md flex flex-col gap-2 relative overflow-hidden shrink-0 select-none text-left"
+                className="flex flex-col gap-3 text-left w-full"
               >
-                {/* Decorative glow */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
-                
-                <div className="flex justify-between items-center leading-none">
-                  <div>
-                    <span className="text-[7.5px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none block">Clima Atual • Osasco</span>
-                    <span className="text-3xl font-display font-black tracking-tighter mt-1 block">{currTemp}°C</span>
+                {/* Horizontal Stories bar styled like Instagram */}
+                <div className="bg-white rounded-2xl p-2.5 flex flex-col gap-1.5 shadow-2xs border border-stone-200 select-none shrink-0 overflow-hidden animate-fade-in">
+                  <div className="flex justify-between items-center pr-1 select-none">
+                    <span className="text-[7.5px] font-sans font-black text-stone-400 uppercase tracking-wider">Canais Populares</span>
+                    <span className="text-[7px] text-blue-500 font-bold bg-blue-50 px-1 py-0.2 rounded">Feed de Osasco</span>
                   </div>
-                  <div className="text-3xl animate-bounce">🌦️</div>
+                  <div className="flex overflow-x-auto gap-3.5 pb-1 scrollbar-none scroll-smooth">
+                    {stories.map((st) => {
+                      const isStoryActive = slide === st.key;
+                      return (
+                        <button
+                          key={st.key}
+                          onClick={() => handleSetSlide(st.key)}
+                          className="flex flex-col items-center gap-1 shrink-0 relative focus:outline-none active:scale-95 transition"
+                        >
+                          {/* Story Avatar Ring */}
+                          <div className={`w-10 h-10 rounded-full p-[2px] flex items-center justify-center transition-all ${
+                            isStoryActive 
+                              ? "bg-slate-900 scale-102 shadow-[0_0_8px_rgba(15,23,42,0.15)]" 
+                              : "bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888]"
+                          }`}>
+                            <div className="bg-white w-full h-full rounded-full p-[1.5px] flex items-center justify-center overflow-hidden">
+                              <img
+                                src={st.profile.avatar}
+                                alt={st.profile.displayName}
+                                className="w-full h-full rounded-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          </div>
+                          {/* Mini Indicator Badge inside Story */}
+                          <div className="absolute right-0 bottom-4 bg-slate-900 border border-white text-[7.5px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                            {st.icon}
+                          </div>
+                          <span className={`text-[8.5px] font-sans tracking-tight max-w-[44px] truncate leading-none mt-0.5 ${
+                            isStoryActive ? "text-slate-900 font-extrabold" : "text-stone-500 font-semibold"
+                          }`}>
+                            {st.profile.username}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center text-[8.5px] font-mono text-stone-200 border-t border-white/10 pt-2 mt-1">
-                  <span>Sensação: {sensation}°C</span>
-                  <span className="text-emerald-400 font-bold">Nuvens e Chuva</span>
-                  <span>Umid.: 85%</span>
+                {/* Main Profile Header card of news content */}
+                {slide !== "weather" && (
+                  <div className="bg-white rounded-2xl p-3 border border-stone-200 flex flex-col gap-2 text-left shadow-2xs">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-12 h-12 rounded-full border border-stone-200 overflow-hidden shrink-0">
+                        <img 
+                          src={getSourceProfile(slide).avatar} 
+                          alt="Avatar" 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer" 
+                        />
+                      </div>
+                      <div className="flex-grow leading-none">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-sans font-black text-stone-900">
+                            {getSourceProfile(slide).username}
+                          </span>
+                          {getSourceProfile(slide).verified && (
+                            <span className="text-[9px] text-[#0095f6]" title="Perfil Verificado">✓</span>
+                          )}
+                        </div>
+                        <span className="text-[8px] text-stone-500 font-bold font-sans mt-1 block">
+                          {getSourceProfile(slide).displayName}
+                        </span>
+                        <div className="flex gap-2.5 mt-1 text-[7.5px] font-mono text-stone-400 font-bold">
+                          <span>{ALL_NEWS_DATABASE[slide.replace("news-", "")]?.length || 0} posts</span>
+                          <span>{getSourceProfile(slide).followers} seguidor.</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[8.5px] font-sans font-normal leading-normal text-stone-600 border-t border-stone-105 pt-1.5 mt-0.5 select-text">
+                      {getSourceProfile(slide).bio}
+                    </p>
+                    <span className="text-[7.5px] font-bold text-blue-600 tracking-tight block -mt-1 leading-none">
+                      linktr.ee/{getSourceProfile(slide).username}
+                    </span>
+                  </div>
+                )}
+
+                {/* Vertically Scrolling news cards */}
+                <div className="flex flex-col gap-3 pb-3">
+                  
+                  {/* WEATHER POST CARD INJECTED AT TOP OF 'weather' FEED */}
+                  {slide === "weather" && (
+                    <div className="bg-white border border-stone-200 rounded-2xl py-3 px-3 shadow-2xs flex flex-col gap-2 relative">
+                      
+                      {/* Weather Post Header */}
+                      <div className="flex items-center justify-between border-b border-stone-100 pb-1.5 select-none">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0a2342] to-[#123c69] flex items-center justify-center overflow-hidden border border-blue-900 shadow-2xs shrink-0 p-0.5">
+                            <span className="text-[10px]">⛅</span>
+                          </div>
+                          <div className="text-left leading-none font-sans">
+                            <div className="flex items-center gap-0.5">
+                              <span className="text-[9.5px] font-black text-stone-900">clima_tempo_osasco</span>
+                              <span className="text-[8px] text-[#0095f6] font-bold">✓</span>
+                            </div>
+                            <span className="text-[7px] text-stone-400 font-bold block mt-0.5">Osasco, São Paulo</span>
+                          </div>
+                        </div>
+                        <span className="text-[7.5px] bg-amber-50 text-amber-700 font-mono font-bold border border-amber-200 px-1.5 py-0.5 rounded-full select-all">CLIMA ATUAL</span>
+                      </div>
+
+                      {/* Weather Post Content */}
+                      <div className="bg-gradient-to-br from-[#0a2342] to-[#123c69] border border-blue-900 rounded-xl p-3 text-white shadow-md flex flex-col gap-2 relative overflow-hidden shrink-0 text-left select-none">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/15 rounded-full blur-xl pointer-events-none" />
+                        
+                        <div className="flex justify-between items-center leading-none">
+                          <div>
+                            <span className="text-[7px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none block">Osasco • Previsão</span>
+                            <span className="text-2xl font-display font-black tracking-tighter mt-1 block select-all">{currTemp}°C</span>
+                          </div>
+                          <div className="text-2xl animate-bounce">🌦️</div>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[8px] font-mono text-stone-200 border-t border-white/10 pt-1.5 mt-1">
+                          <span>Sensação: {sensation}°C</span>
+                          <span className="text-emerald-400 font-bold">Instável com Chuva</span>
+                          <span>Umid.: 85%</span>
+                        </div>
+                      </div>
+
+                      {/* Post Actions for Weather */}
+                      <div className="flex justify-between items-center pt-1 border-t border-stone-100 select-none">
+                        <div className="flex gap-3">
+                          <button 
+                            onClick={() => {
+                              setLikedArticles(prev => ({
+                                ...prev,
+                                "ClimaTempoOsasco": !prev["ClimaTempoOsasco"]
+                              }));
+                            }}
+                            className="transition active:scale-75 focus:outline-none"
+                          >
+                            <svg viewBox="0 0 24 24" fill={likedArticles["ClimaTempoOsasco"] ? "#ef4444" : "none"} stroke={likedArticles["ClimaTempoOsasco"] ? "#ef4444" : "#1c1917"} strokeWidth="2.5" className="w-5 h-5">
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                            </svg>
+                          </button>
+                          
+                          <button 
+                            onClick={() => setActiveCommentsPost("clima-osasco-post")}
+                            className="transition active:scale-75 focus:outline-none"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5">
+                              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                            </svg>
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              alert("Boletim meteorológico compartilhado no feed!");
+                            }}
+                            className="transition active:scale-75 focus:outline-none"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5">
+                              <line x1="22" y1="2" x2="11" y2="13" />
+                              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            setBookmarkedArticles(prev => ({
+                              ...prev,
+                              "ClimaTempoOsasco": !prev["ClimaTempoOsasco"]
+                            }));
+                          }}
+                          className="transition active:scale-75 focus:outline-none"
+                        >
+                          <svg viewBox="0 0 24 24" fill={bookmarkedArticles["ClimaTempoOsasco"] ? "#f59e0b" : "none"} stroke={bookmarkedArticles["ClimaTempoOsasco"] ? "#f59e0b" : "#1c1917"} strokeWidth="2.5" className="w-5 h-5">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Display like metadata content */}
+                      <p className="text-[8.5px] text-stone-500 font-bold leading-none mt-1 text-left select-none">
+                        ♥ Curtido por <span className="text-stone-900">morador_osasco</span> e <span className="text-stone-900">outros {likedArticles["ClimaTempoOsasco"] ? 1421 : 1420} moradores</span>
+                      </p>
+
+                      <div className="text-[9px] text-stone-850 font-sans leading-normal font-medium mt-0.5 text-left">
+                        <span className="font-extrabold text-stone-950 mr-1.5">clima_tempo_osasco</span>
+                        Temperatura estável na região metropolitana com ventilação litorânea trazendo umidade e queda gradual de sensação térmica à noite. #ClimaOsasco #Previsão #TempoReal
+                      </div>
+
+                      <button 
+                        onClick={() => setActiveCommentsPost("clima-osasco-post")}
+                        className="text-[8px] font-sans font-semibold text-stone-400 hover:text-stone-650 transition text-left tracking-tight mt-1 self-start focus:outline-none"
+                      >
+                        Ver todos os {commentsState["clima-osasco-post"]?.length || 3} comentários
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ACTIVE FEED NEWS POST ARTICLES LIST */}
+                  {filteredArticles.length === 0 ? (
+                    <div className="bg-white rounded-2xl py-8 px-4 text-center border border-stone-200">
+                      <span className="text-3xl block">🔎</span>
+                      <p className="text-[11px] font-bold text-stone-500 mt-2 font-mono uppercase tracking-tight">Nenhuma publicação encontrada</p>
+                      <p className="text-[8px] text-stone-400 mt-1 font-sans">Tente digitar outros termos na barra acima</p>
+                    </div>
+                  ) : (
+                    filteredArticles.map((art, idx) => {
+                      const profile = getSourceProfile(slide, art.source);
+                      const isLiked = !!likedArticles[art.title];
+                      const isBookmarked = !!bookmarkedArticles[art.title];
+                      const commentsList = commentsState[art.title] || [];
+                      
+                      return (
+                        <div 
+                          key={art.title + idx}
+                          className="bg-white border border-stone-200/90 rounded-2xl py-3 px-3 shadow-2xs flex flex-col gap-2 relative transition-all duration-300 pointer-events-auto"
+                        >
+                          {/* Post Card Header */}
+                          <div className="flex items-center justify-between border-b border-stone-100 pb-1.5 select-none">
+                            <div className="flex items-center gap-2">
+                              {/* Story outline ring */}
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] p-[1.5px] flex items-center justify-center shrink-0 overflow-hidden">
+                                <div className="bg-white w-full h-full rounded-full p-[1px] flex items-center justify-center overflow-hidden">
+                                  <img
+                                    src={profile.avatar}
+                                    alt={profile.displayName}
+                                    className="w-full h-full rounded-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-left leading-none font-sans">
+                                <div className="flex items-center gap-0.5">
+                                  <span className="text-[9.5px] font-black text-stone-900">{profile.username}</span>
+                                  {profile.verified && (
+                                    <span className="text-[8px] text-[#0095f6]" title="Canal Oficial">✓</span>
+                                  )}
+                                </div>
+                                <span className="text-[7.2px] text-stone-400 font-bold block mt-0.5 font-mono uppercase">
+                                  {art.source}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <span className="text-[7.5px] text-stone-400 font-bold font-mono tracking-tighter shrink-0 select-none">
+                              {art.time}
+                            </span>
+                          </div>
+
+                          <div className="flex select-none">
+                            <span className={`text-[7px] font-mono font-black italic tracking-wider py-0.5 px-2 rounded-md ${art.badgeColor || 'bg-stone-50 text-stone-800 border'}`}>
+                              {art.badge}
+                            </span>
+                          </div>
+
+                          {/* Cover Image from the Article */}
+                          <div className="relative overflow-hidden rounded-xl border border-stone-100">
+                            <img
+                              src={art.image}
+                              alt={art.title}
+                              className="w-full h-40 object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent pointer-events-none" />
+                          </div>
+
+                          {/* Post Buttons Actions Bar */}
+                          <div className="flex justify-between items-center pt-1 border-t border-stone-100 select-none">
+                            <div className="flex gap-3">
+                              <button 
+                                onClick={() => {
+                                  setLikedArticles(prev => ({
+                                    ...prev,
+                                    [art.title]: !prev[art.title]
+                                  }));
+                                }}
+                                className="transition active:scale-75 focus:outline-none"
+                              >
+                                <svg 
+                                  viewBox="0 0 24 24" 
+                                  fill={isLiked ? "#ef4444" : "none"} 
+                                  stroke={isLiked ? "#ef4444" : "#1c1917"} 
+                                  strokeWidth="2.5" 
+                                  className="w-5 h-5 hover:text-red-500 transition duration-150"
+                                >
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                </svg>
+                              </button>
+                              
+                              <button 
+                                onClick={() => setActiveCommentsPost(art.title)}
+                                className="transition active:scale-75 focus:outline-none"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5 hover:text-blue-500 transition duration-150">
+                                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                                </svg>
+                              </button>
+
+                              <button 
+                                onClick={() => {
+                                  alert(`Link copiado com sucesso! Compartilhe o canal ${profile.username}`);
+                                }}
+                                className="transition active:scale-75 focus:outline-none"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="2.5" className="w-5 h-5 hover:text-green-500 transition duration-150">
+                                  <line x1="22" y1="2" x2="11" y2="13" />
+                                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            <button 
+                              onClick={() => {
+                                setBookmarkedArticles(prev => ({
+                                  ...prev,
+                                  [art.title]: !prev[art.title]
+                                }));
+                              }}
+                              className="transition active:scale-75 focus:outline-none"
+                            >
+                              <svg 
+                                viewBox="0 0 24 24" 
+                                fill={isBookmarked ? "#f59e0b" : "none"} 
+                                stroke={isBookmarked ? "#f59e0b" : "#1c1917"} 
+                                strokeWidth="2.5" 
+                                className="w-5 h-5 hover:text-amber-500 transition duration-150"
+                              >
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* Likes Metadata */}
+                          <p className="text-[8.5px] text-stone-500 font-bold leading-none mt-1 text-left select-none">
+                            ♥ Curtido por <span className="text-stone-900">osasco_city</span> e <span className="text-stone-900">outros {isLiked ? 1421 : 1420} moradores</span>
+                          </p>
+
+                          {/* Narrative Caption text */}
+                          <div className="text-[9px] text-stone-850 font-sans leading-normal font-medium mt-0.5 text-left">
+                            <span className="font-black text-stone-950 mr-1.5 select-all">{profile.username}</span>
+                            <span className="font-extrabold text-stone-900 tracking-tight block text-[10px] uppercase my-1 select-all">
+                              {art.title}
+                            </span>
+                            <span className="text-stone-600 block text-[9px] leading-normal select-all">
+                              {art.subtitle}
+                            </span>
+                            <span className="text-blue-600 font-mono text-[7.5px] font-bold block mt-1 select-none">
+                              #osasco #regiaooeste #noticias #{profile.username}
+                            </span>
+                          </div>
+
+                          {/* comments count link */}
+                          <button 
+                            onClick={() => setActiveCommentsPost(art.title)}
+                            className="text-[8px] font-sans font-semibold text-stone-400 hover:text-stone-650 transition text-left tracking-tight mt-1 self-start focus:outline-none"
+                          >
+                            Ver todos os {commentsList.length > 0 ? commentsList.length : 2} comentários
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+
                 </div>
               </motion.div>
             )}
@@ -3357,129 +3812,128 @@ function PassengerPhone({
                 </div>
               </motion.div>
             )}
+          </AnimatePresence>
 
-            {slide === "news-g1" && (
+          {/* INTERACTIVE INSTAGRAM COMMENTS SYSTEM SLIDE-UP SHEET */}
+          <AnimatePresence>
+            {activeCommentsPost && (
               <motion.div
-                key="news-g1"
-                initial={{ x: 120, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -120, opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                className="absolute inset-x-0 bottom-0 bg-white border-t border-stone-200 rounded-t-3xl shadow-2xl z-30 flex flex-col max-h-[350px] min-h-[300px]"
               >
-                {/* G1 HEADER BAR */}
-                <div className="bg-[#cc0000] text-white py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-red-950 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span className="bg-white text-[#cc0000] px-1.5 py-0.2 rounded font-black italic text-[11px] tracking-tighter select-none">g1</span>
-                    <span className="text-[9px] font-extrabold tracking-widest text-red-100 uppercase">OSASCO & REGIÃO</span>
+                {/* Header */}
+                <div className="px-4 py-3 flex justify-between items-center bg-[#f8f9fa] rounded-t-3xl border-b border-stone-100 select-none shrink-0 border-box">
+                  <div className="flex flex-col text-left">
+                    <span className="text-[10px] font-sans font-black text-stone-900 uppercase">Comentários</span>
+                    <span className="text-[7.5px] text-stone-400 font-bold block max-w-[200px] truncate leading-none mt-0.5">
+                      {activeCommentsPost === "clima-osasco-post" ? "Previsão do Tempo • Osasco" : activeCommentsPost}
+                    </span>
                   </div>
-                  <span className="text-[8px] font-bold bg-red-800 text-white px-1.5 py-0.2 rounded-full animate-pulse">AO VIVO</span>
+                  <button 
+                    onClick={() => {
+                      setActiveCommentsPost(null);
+                      setNewCommentText("");
+                    }}
+                    className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-extrabold text-stone-600 hover:bg-stone-200 transition focus:outline-none"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                {/* G1 ARTICLE CONTENT */}
-                <div className="p-3 overflow-y-auto flex-grow bg-white font-sans max-h-[350px]">
-                  <img 
-                    src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=450&auto=format&fit=crop&q=80" 
-                    alt="Carreta de Milho PRF"
-                    className="w-full h-28 object-cover rounded-xl mb-2 shadow-sm border border-stone-100"
-                    referrerPolicy="no-referrer"
+                {/* ListView */}
+                <div className="flex-grow overflow-y-auto p-3.5 flex flex-col gap-3 scrollbar-none bg-[#fafafa]">
+                  {(() => {
+                    const commentsArr = commentsState[activeCommentsPost] || [
+                      { id: "fallback-1", username: "leitor_atento", text: "Excelente matéria, importante acompanhar essas atualizações de trânsito em Osasco.", time: "Há 10 min" },
+                      { id: "fallback-2", username: "morador_km18", text: "Estou gostando de ver essas notícias em tempo real, ajuda bastante quem pega ônibus do Palmares.", time: "Há 20 min" }
+                    ];
+
+                    return commentsArr.map((comm) => (
+                      <div key={comm.id} className="flex gap-2.5 items-start text-left shrink-0 animate-fade-in pointer-events-auto">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-stone-200 to-stone-300 flex items-center justify-center text-[8.5px] font-black text-stone-700 shrink-0 select-none">
+                          {comm.username.substring(0, 2).toUpperCase()}
+                        </div>
+                        
+                        <div className="flex-grow font-sans leading-none">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8.5px] font-black text-stone-900">{comm.username}</span>
+                            <span className="text-[6.5px] text-stone-400 font-semibold">{comm.time}</span>
+                          </div>
+                          <p className="text-[8.2px] text-stone-600 leading-normal mt-1 font-normal select-all">
+                            {comm.text}
+                          </p>
+                        </div>
+
+                        <button className="text-stone-300 hover:text-red-500 scale-90 active:scale-75 transition focus:outline-none shrink-0">
+                          ♥
+                        </button>
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                {/* Form comment bar */}
+                <div className="border-t border-stone-200 px-3 py-2 flex items-center gap-2 bg-white shrink-0 select-none border-box">
+                  <input 
+                    type="text"
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    placeholder="Adicione um comentário..."
+                    className="flex-grow bg-stone-50 border border-stone-200 rounded-full py-1.5 px-3.5 text-[9.5px] outline-none font-medium placeholder-stone-400 focus:border-stone-350 text-stone-900"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newCommentText.trim()) {
+                        const commentsKey = activeCommentsPost;
+                        const userCommText = newCommentText.trim();
+                        const currentComments = commentsState[commentsKey] || [
+                          { id: "fallback-1", username: "leitor_atento", text: "Excelente matéria, importante acompanhar essas atualizações de trânsito em Osasco.", time: "Há 10 min" },
+                          { id: "fallback-2", username: "morador_km18", text: "Estou gostando de ver essas notícias em tempo real, ajuda bastante quem pega ônibus do Palmares.", time: "Há 20 min" }
+                        ];
+
+                        const added = {
+                          id: String(Date.now()),
+                          username: "tiagameshow",
+                          text: userCommText,
+                          time: "Agora"
+                        };
+
+                        setCommentsState(prev => ({
+                          ...prev,
+                          [commentsKey]: [...currentComments, added]
+                        }));
+                        setNewCommentText("");
+                      }
+                    }}
                   />
-                  <div className="bg-red-50 text-[#cc0000] border border-red-105 rounded-md px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase inline-block mb-1">
-                    APREENSÃO RECORD
-                  </div>
-                  <h1 className="text-stone-950 font-black text-[12px] leading-tight mb-1 tracking-tight uppercase hover:text-[#cc0000] transition">
-                    PRF APREENDE EM MS CARGA DE MILHO QUE ESCONDIA TONELADAS DE DROGA EM CAMINHÃO PARA SP
-                  </h1>
-                  <p className="text-[9px] text-stone-500 leading-normal font-medium">
-                    Autoridades paulistas confirmam rastreamento estratégico de veículo em rodovia. Motorista foi detido em flagrante.
-                  </p>
-                  <p className="text-[7.5px] text-stone-400 font-bold mt-1.5 font-mono uppercase">
-                    🕒 Há 2 min • Por G1 Osasco
-                  </p>
-                </div>
-              </motion.div>
-            )}
+                  <button 
+                    onClick={() => {
+                      if (!newCommentText.trim()) return;
+                      const commentsKey = activeCommentsPost;
+                      const userCommText = newCommentText.trim();
+                      const currentComments = commentsState[commentsKey] || [
+                        { id: "fallback-1", username: "leitor_atento", text: "Excelente matéria, importante acompanhar essas atualizações de trânsito em Osasco.", time: "Há 10 min" },
+                        { id: "fallback-2", username: "morador_km18", text: "Estou gostando de ver essas notícias em tempo real, ajuda bastante quem pega ônibus do Palmares.", time: "Há 20 min" }
+                      ];
 
-            {slide === "news-ge" && (
-              <motion.div
-                key="news-ge"
-                initial={{ x: 120, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -120, opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
-              >
-                {/* GE HEADER BAR */}
-                <div className="bg-[#00c853] text-[#002d62] py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-green-800 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span className="bg-[#002d62] text-[#00c853] px-1.5 py-0.2 rounded font-black italic text-[11px] tracking-tighter select-none">ge</span>
-                    <span className="text-[9px] font-extrabold tracking-widest text-[#002d62] uppercase">FUTEBOL PAULISTA</span>
-                  </div>
-                  <span className="text-[7.5px] font-black bg-[#002d62] text-white px-2 py-0.2 rounded-full">EXCLUSIVO</span>
-                </div>
+                      const added = {
+                        id: String(Date.now()),
+                        username: "tiagameshow",
+                        text: userCommText,
+                        time: "Agora"
+                      };
 
-                {/* GE ARTICLE CONTENT */}
-                <div className="p-3 overflow-y-auto flex-grow bg-white font-sans max-h-[350px]">
-                  <img 
-                    src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=450&auto=format&fit=crop&q=80" 
-                    alt="Futebol Arena"
-                    className="w-full h-28 object-cover rounded-xl mb-2 shadow-sm border border-stone-100"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-md px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase inline-block mb-1">
-                    BRASILEIRÃO 2026
-                  </div>
-                  <h1 className="text-stone-950 font-black text-[12px] leading-tight mb-1 tracking-tight uppercase hover:text-emerald-700 transition">
-                    ABEL FERREIRA RETORNA COM TITULARES ABSOLUTOS E PROMETE MAIOR PRESSÃO NO ALLIANZ LOTADO
-                  </h1>
-                  <p className="text-[9px] text-stone-500 leading-normal font-medium">
-                    Com mais de 35 mil ingressos vendidos, Allianz Parque promete ser um caldeirão na busca de três pontos capitais na rodada.
-                  </p>
-                  <p className="text-[7.5px] text-stone-400 font-bold mt-1.5 font-mono uppercase">
-                    🕒 Há 15 min • Por GE São Paulo
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {slide === "news-cnn" && (
-              <motion.div
-                key="news-cnn"
-                initial={{ x: 120, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -120, opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex flex-col text-left flex-grow -mx-3 -mt-2 bg-[#f4f6f9] overflow-hidden"
-              >
-                {/* CNN HEADER BAR */}
-                <div className="bg-[#cc0000] text-white py-2 px-3 flex items-center justify-between font-sans select-none shrink-0 border-b border-stone-800 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span className="bg-white text-black px-1.5 py-0.2 font-extrabold text-[10px] tracking-tighter select-none">CNN</span>
-                    <span className="text-[9px] font-black tracking-widest text-white uppercase italic">BRASIL</span>
-                  </div>
-                  <span className="text-[8px] font-extrabold bg-stone-900 border border-red-500 px-1.5 py-0.2 text-red-500 rounded">BREAKING</span>
-                </div>
-
-                {/* CNN ARTICLE CONTENT */}
-                <div className="p-3 overflow-y-auto flex-grow bg-white font-sans max-h-[350px]">
-                  <img 
-                    src="https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=450&auto=format&fit=crop&q=80" 
-                    alt="Chuva Grande Sao Paulo"
-                    className="w-full h-28 object-cover rounded-xl mb-2 shadow-sm border border-stone-100"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="bg-red-50 text-red-700 border border-red-100 rounded-md px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase inline-block mb-1">
-                    CATASTROFE AMBIENTAL
-                  </div>
-                  <h1 className="text-stone-950 font-black text-[12px] leading-tight mb-1 tracking-tight uppercase hover:text-red-650 transition">
-                    FRENTE FRIA AVANÇA COM VENTANIA E TEMPERATURA SOFRE QUEDA HISTÓRICA DE ATÉ 12 GRAUS EM SP
-                  </h1>
-                  <p className="text-[9px] text-stone-500 leading-normal font-medium">
-                    Defesa Civil emite estado de atenção para pancadas de chuva severas acompanhadas de descargas elétricas no cinturão metropolitano.
-                  </p>
-                  <p className="text-[7.5px] text-stone-400 font-bold mt-1.5 font-mono uppercase">
-                    🕒 Atualizado Agora • CNN Meteorologia
-                  </p>
+                      setCommentsState(prev => ({
+                        ...prev,
+                        [commentsKey]: [...currentComments, added]
+                      }));
+                      setNewCommentText("");
+                    }}
+                    className="text-blue-500 font-extrabold text-[9.5px] px-2 py-1.5 hover:text-blue-700 active:scale-95 transition focus:outline-none"
+                  >
+                    Publicar
+                  </button>
                 </div>
               </motion.div>
             )}
