@@ -1748,40 +1748,7 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* INTERACTIVE FLOATING VOLUME AND AUDIO HELPER PANEL FOR SMARTPHONE TOUCH SCREEN */}
-        <div className="absolute bottom-24 right-6 z-30 flex items-center bg-black/90 border border-stone-800/80 p-2 rounded-2xl gap-2 shadow-[0_10px_30px_rgba(0,0,0,0.7)] backdrop-blur-md transition-all duration-150 hover:bg-black select-none">
-          <button
-            onClick={() => handleUpdateVolume(monitorObj.id, (typeof monitorObj.volume === 'number' ? monitorObj.volume : 80) - 5)}
-            className="w-8 h-8 rounded-full bg-stone-900 border border-stone-800 text-stone-200 hover:text-white hover:bg-stone-850 flex items-center justify-center font-bold text-base transition-all duration-150 active:scale-90 cursor-pointer"
-            title="Abaixar Volume (ArrowDown)"
-          >
-            -
-          </button>
-          
-          <button
-            onClick={() => handleToggleMute(monitorObj.id)}
-            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer ${
-              monitorObj.mute 
-                ? "bg-red-950/80 border-red-900/60 text-red-400 hover:bg-red-900/80" 
-                : "bg-emerald-950/80 border-emerald-900/60 text-emerald-400 hover:bg-emerald-900/80"
-            }`}
-            title={monitorObj.mute ? "Ativar Áudio (Unmute)" : "Desativar Áudio (Mute)"}
-          >
-            {monitorObj.mute ? <VolumeX className="w-4.5 h-4.5 font-bold text-red-400" /> : <Volume2 className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />}
-          </button>
-
-          <button
-            onClick={() => handleUpdateVolume(monitorObj.id, (typeof monitorObj.volume === 'number' ? monitorObj.volume : 80) + 5)}
-            className="w-8 h-8 rounded-full bg-stone-900 border border-stone-800 text-stone-200 hover:text-white hover:bg-stone-850 flex items-center justify-center font-bold text-base transition-all duration-150 active:scale-90 cursor-pointer"
-            title="Aumentar Volume (ArrowUp)"
-          >
-            +
-          </button>
-
-          <span className="text-[10px] font-mono font-black text-white px-1.5 py-1 border border-white/5 bg-stone-950/60 rounded-lg min-w-10 text-center select-none leading-none">
-            {monitorObj.mute ? "0%" : `${typeof monitorObj.volume === 'number' ? monitorObj.volume : 80}%`}
-          </span>
-        </div>
+        {/* Standalone TV Screen background visual styling */}
         
         {/* Floating click to activate sound banner if not dismissed yet */}
         {!audioOverlayDismissed && (
