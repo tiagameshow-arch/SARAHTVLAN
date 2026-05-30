@@ -10,6 +10,7 @@ import {
   CloudRain, 
   Sun, 
   Thermometer, 
+  Volume1,
   Volume2, 
   VolumeX, 
   RefreshCw, 
@@ -44,12 +45,13 @@ import weatherWallpaper from "./assets/images/weather_wallpaper_1779472843262.pn
 interface YouTubePlayerProps {
   videoId: string;
   mute: boolean;
+  volume?: number;
   onEnded: () => void;
   className?: string;
   title?: string;
 }
 
-function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlayerProps) {
+function YouTubePlayer({ videoId, mute, volume, onEnded, className, title }: YouTubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
 
@@ -107,6 +109,8 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
                 } else {
                   event.target.unMute();
                 }
+                const volSetting = typeof volume === "number" ? volume : 80;
+                event.target.setVolume(volSetting);
                 event.target.playVideo();
               } catch (e) {
                 console.warn("Retrying playVideo:", e);
@@ -123,6 +127,8 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
                     } else {
                       event.target.unMute();
                     }
+                    const volSettingFallback = typeof volume === "number" ? volume : 80;
+                    event.target.setVolume(volSettingFallback);
                     event.target.playVideo();
                   }
                 } catch (err) {}
@@ -195,20 +201,25 @@ function YouTubePlayer({ videoId, mute, onEnded, className, title }: YouTubePlay
     };
   }, [videoId]);
 
-  // Handle dynamic unmuting/muting on the fly when prop changes
+  // Handle dynamic unmuting/muting and volume adjustments on the fly when props change
   useEffect(() => {
-    if (playerRef.current && typeof playerRef.current.mute === "function") {
+    if (playerRef.current) {
       try {
-        if (mute) {
-          playerRef.current.mute();
-        } else {
-          playerRef.current.unMute();
+        if (typeof playerRef.current.mute === "function") {
+          if (mute) {
+            playerRef.current.mute();
+          } else {
+            playerRef.current.unMute();
+          }
+        }
+        if (typeof playerRef.current.setVolume === "function" && typeof volume === "number") {
+          playerRef.current.setVolume(volume);
         }
       } catch (err) {
-        console.warn("Error changing volume dynamically on YT Player:", err);
+        console.warn("Error changing volume/mute dynamically on YT Player:", err);
       }
     }
-  }, [mute]);
+  }, [mute, volume]);
 
   return <div ref={containerRef} className={className} title={title} />;
 }
@@ -746,6 +757,84 @@ export default function App() {
   // Custom video input (add video to active monitor's playlist)
   const [newVideoInput, setNewVideoInput] = useState("");
   const [newMonitorNameInput, setNewMonitorNameInput] = useState("");
+  
+  // Dynamic Volume overlay HUD states and handlers
+  const [volumeHUD, setVolumeHUD] = useState<{ visible: boolean; value: number; monitorName?: string }>({ 
+    visible: false, 
+    value: 80, 
+    monitorName: "" 
+  });
+  const volumeHUDTimerRef = useRef<any>(null);
+
+  const triggerVolumeHUD = (value: number, monitorName?: string) => {
+    if (volumeHUDTimerRef.current) {
+      clearTimeout(volumeHUDTimerRef.current);
+    }
+    setVolumeHUD({ visible: true, value, monitorName });
+    volumeHUDTimerRef.current = setTimeout(() => {
+      setVolumeHUD(prev => ({ ...prev, visible: false }));
+    }, 2000);
+  };
+
+  const handleUpdateVolume = (monitorId: string, newVolume: number) => {
+    const clampedVol = Math.round(Math.max(0, Math.min(100, newVolume)));
+    const updated = tvStateRef.current.monitors.map(m => {
+      if (m.id === monitorId) {
+        triggerVolumeHUD(clampedVol, m.name);
+        return { 
+          ...m, 
+          volume: clampedVol,
+          mute: clampedVol === 0 ? true : false 
+        };
+      }
+      return m;
+    });
+    syncMonitorsToServer(updated);
+  };
+
+  // Keyboard and physical volume adjustments effect
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in a form input or textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea") {
+        return;
+      }
+
+      let targetId: string | null = null;
+      if (urlMode === "tv") {
+        targetId = urlMonitorId || (tvStateRef.current.monitors[0]?.id || "terminal-principal");
+      } else if (activeTab === "monitor" && activePreviewMonitorId !== "grid") {
+        targetId = activePreviewMonitorId;
+      } else if (selectedMonitorId) {
+        targetId = selectedMonitorId;
+      }
+
+      if (!targetId) return;
+
+      const currentMonitor = tvStateRef.current.monitors.find(m => m.id === targetId);
+      if (!currentMonitor) return;
+
+      // Default to 80 if volume is not defined and is not muted
+      const currentVol = typeof currentMonitor.volume === "number" ? currentMonitor.volume : (currentMonitor.mute ? 0 : 80);
+
+      // Volume Up keys
+      if (e.key === "AudioVolumeUp" || e.key === "VolumeUp" || e.key === "ArrowUp") {
+        e.preventDefault();
+        handleUpdateVolume(targetId, currentVol + 5);
+      }
+      // Volume Down keys
+      else if (e.key === "AudioVolumeDown" || e.key === "VolumeDown" || e.key === "ArrowDown") {
+        e.preventDefault();
+        handleUpdateVolume(targetId, currentVol - 5);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [urlMode, urlMonitorId, activeTab, activePreviewMonitorId, selectedMonitorId]);
   
   // Custom audio integration for MATCH DAY / SONOPLASTIA
   const [localSpeechText, setLocalSpeechText] = useState("Atenção passageiros do Parque Palmares! Ônibus linha 035 se aproxima do terminal.");
@@ -1289,7 +1378,10 @@ export default function App() {
   const handleToggleMute = (monitorId: string) => {
     const updated = tvStateRef.current.monitors.map(m => {
       if (m.id === monitorId) {
-        return { ...m, mute: !m.mute };
+        const nextMute = !m.mute;
+        const nextVolume = nextMute ? 0 : (typeof m.volume === "number" && m.volume > 0 ? m.volume : 80);
+        triggerVolumeHUD(nextVolume, m.name);
+        return { ...m, mute: nextMute, volume: nextVolume };
       }
       return m;
     });
@@ -1539,6 +1631,80 @@ export default function App() {
         style={{ backgroundImage: `url(${BACKGROUND_PRESETS[bgStyle].url})` }}
       >
         <AudioEffectsEmitter tvState={tvState} />
+
+        {/* VOLUME HUD OVERLAY */}
+        <AnimatePresence>
+          {volumeHUD.visible && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="absolute top-24 right-6 z-50 bg-black/90 text-white border border-stone-800 rounded-3xl p-3 px-4 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md flex items-center gap-3.5 select-none pointer-events-none animate-fade-in"
+            >
+              <div className="flex items-center justify-center bg-blue-600/20 border border-blue-500/30 p-2 rounded-full h-9 w-9 text-blue-400">
+                {volumeHUD.value === 0 ? (
+                  <VolumeX className="w-5 h-5 text-gray-500" />
+                ) : volumeHUD.value < 40 ? (
+                  <Volume1 className="w-5 h-5 text-blue-400" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-blue-400 animate-pulse" />
+                )}
+              </div>
+              <div className="text-left">
+                <p className="text-[7.5px] font-mono uppercase font-black tracking-widest text-[#e8a317] leading-none mb-1">
+                  Volume do Sistema
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-24 h-2 bg-stone-800 rounded-full overflow-hidden border border-white/5">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-150" 
+                      style={{ width: `${volumeHUD.value}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-mono font-black text-white tabular-nums w-8">
+                    {volumeHUD.value}%
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* INTERACTIVE FLOATING VOLUME AND AUDIO HELPER PANEL FOR SMARTPHONE TOUCH SCREEN */}
+        <div className="absolute bottom-24 right-6 z-30 flex items-center bg-black/90 border border-stone-800/80 p-2 rounded-2xl gap-2 shadow-[0_10px_30px_rgba(0,0,0,0.7)] backdrop-blur-md transition-all duration-150 hover:bg-black select-none">
+          <button
+            onClick={() => handleUpdateVolume(monitorObj.id, (typeof monitorObj.volume === 'number' ? monitorObj.volume : 80) - 5)}
+            className="w-8 h-8 rounded-full bg-stone-900 border border-stone-800 text-stone-200 hover:text-white hover:bg-stone-850 flex items-center justify-center font-bold text-base transition-all duration-150 active:scale-90 cursor-pointer"
+            title="Abaixar Volume (ArrowDown)"
+          >
+            -
+          </button>
+          
+          <button
+            onClick={() => handleToggleMute(monitorObj.id)}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer ${
+              monitorObj.mute 
+                ? "bg-red-950/80 border-red-900/60 text-red-400 hover:bg-red-900/80" 
+                : "bg-emerald-950/80 border-emerald-900/60 text-emerald-400 hover:bg-emerald-900/80"
+            }`}
+            title={monitorObj.mute ? "Ativar Áudio (Unmute)" : "Desativar Áudio (Mute)"}
+          >
+            {monitorObj.mute ? <VolumeX className="w-4.5 h-4.5 font-bold text-red-400" /> : <Volume2 className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />}
+          </button>
+
+          <button
+            onClick={() => handleUpdateVolume(monitorObj.id, (typeof monitorObj.volume === 'number' ? monitorObj.volume : 80) + 5)}
+            className="w-8 h-8 rounded-full bg-stone-900 border border-stone-800 text-stone-200 hover:text-white hover:bg-stone-850 flex items-center justify-center font-bold text-base transition-all duration-150 active:scale-90 cursor-pointer"
+            title="Aumentar Volume (ArrowUp)"
+          >
+            +
+          </button>
+
+          <span className="text-[10px] font-mono font-black text-white px-1.5 py-1 border border-white/5 bg-stone-950/60 rounded-lg min-w-10 text-center select-none leading-none">
+            {monitorObj.mute ? "0%" : `${typeof monitorObj.volume === 'number' ? monitorObj.volume : 80}%`}
+          </span>
+        </div>
         
         {/* Floating click to activate sound banner if not dismissed yet */}
         {!audioOverlayDismissed && (
@@ -1635,6 +1801,7 @@ export default function App() {
                       <YouTubePlayer
                         videoId={currentVidId}
                         mute={monitorObj.mute}
+                        volume={monitorObj.volume}
                         onEnded={() => handleNextVideo(monitorObj.id)}
                         className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
                         title="Sinal Retransmissor de Merchandising"
@@ -1974,6 +2141,35 @@ export default function App() {
 
                           {/* Video area inside simulated screen, positioned between header and ticker */}
                           <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
+                            {/* Inner volume indicator HUD overlay inside dashboard TV screen */}
+                            <AnimatePresence>
+                              {volumeHUD.visible && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.8 }}
+                                  className="absolute top-4 right-4 z-40 bg-black/85 border border-stone-850 px-3 py-1.5 rounded-2xl flex items-center gap-2 shadow-2xl backdrop-blur-sm pointer-events-none"
+                                >
+                                  {volumeHUD.value === 0 ? (
+                                    <VolumeX className="w-3.5 h-3.5 text-stone-550 shrink-0" />
+                                  ) : volumeHUD.value < 40 ? (
+                                    <Volume1 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                  ) : (
+                                    <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
+                                  )}
+                                  <div className="w-16 h-1.5 bg-stone-900 rounded-full overflow-hidden border border-white/5">
+                                    <div 
+                                      className="bg-emerald-500 h-full transition-all duration-150" 
+                                      style={{ width: `${volumeHUD.value}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[9.5px] font-mono font-black text-emerald-400">
+                                    {volumeHUD.value}%
+                                  </span>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+
                             {activeVideoId ? (
                               false ? (
                                 localVideos[activeVideoId] ? (
@@ -1981,6 +2177,11 @@ export default function App() {
                                     src={localVideos[activeVideoId]?.url}
                                     autoPlay
                                     muted={activeMonitorObj.mute}
+                                    ref={(el) => {
+                                      if (el) {
+                                        el.volume = (typeof activeMonitorObj.volume === "number" ? activeMonitorObj.volume : 80) / 100;
+                                      }
+                                    }}
                                     onEnded={() => handleNextVideo(activeMonitorObj.id)}
                                     playsInline
                                     className="absolute inset-0 w-full h-full object-cover"
@@ -2028,6 +2229,7 @@ export default function App() {
                                 <YouTubePlayer
                                   videoId={activeVideoId}
                                   mute={activeMonitorObj.mute}
+                                  volume={activeMonitorObj.volume}
                                   onEnded={() => handleNextVideo(activeMonitorObj.id)}
                                   className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
                                   title="Sinal Retransmissor de Merchandising"
@@ -2667,8 +2869,8 @@ export default function App() {
               </button>
             </div>
 
-            {/* MONITOR MUTE TOGGLE CARD DIRECTLY IN SETTINGS FOR MAXIMUM SIMPLICITY */}
-            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-1.5 text-left">
+            {/* MONITOR MUTE & VOLUME TOGGLE CARD DIRECTLY IN SETTINGS */}
+            <div className="bg-stone-950/60 p-2.5 rounded-xl border border-stone-850/60 flex flex-col gap-2.5 text-left animate-fade-in">
               <div className="flex justify-between items-center bg-[#02180e] px-2 py-1 rounded-lg border border-emerald-500/10">
                 <span className="text-[8px] text-stone-450 font-extrabold uppercase tracking-wide">
                   ÁUDIO DA TV
@@ -2676,8 +2878,65 @@ export default function App() {
                 <span className={`text-[6px] font-mono font-bold px-1.5 py-0.5 rounded ${
                   activeMonitor?.mute ? 'bg-stone-900 text-stone-500' : 'bg-emerald-950 text-emerald-400 animate-pulse'
                 }`}>
-                  {activeMonitor?.mute ? "MUDO" : "ALTO-FALANTE ATIVO"}
+                  {activeMonitor?.mute ? "MUDO" : `ALTO-FALANTE ATIVO (${typeof activeMonitor?.volume === "number" ? activeMonitor.volume : 80}%)`}
                 </span>
+              </div>
+
+              {/* Advanced tactile volume slider wrapper */}
+              <div className="flex items-center gap-2 bg-stone-900/60 p-2 rounded-xl border border-stone-850">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeMonitor) {
+                      const currentVol = typeof activeMonitor.volume === "number" ? activeMonitor.volume : 80;
+                      handleUpdateVolume(activeMonitor.id, currentVol - 10);
+                    }
+                  }}
+                  className="p-1 px-1.5 rounded bg-stone-800 hover:bg-stone-750 text-stone-300 hover:text-white font-black text-xs active:scale-90 transition-all cursor-pointer select-none leading-none border border-stone-700/30"
+                  title="Abaixar Volume 10%"
+                >
+                  -
+                </button>
+
+                <div className="flex-grow flex items-center gap-2 min-w-0">
+                  {activeMonitor?.mute ? (
+                    <VolumeX className="w-3.5 h-3.5 text-stone-500 shrink-0" />
+                  ) : (typeof activeMonitor?.volume === "number" ? activeMonitor.volume : 80) < 40 ? (
+                    <Volume1 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  ) : (
+                    <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
+                  )}
+                  
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={activeMonitor?.mute ? 0 : (typeof activeMonitor?.volume === "number" ? activeMonitor.volume : 80)}
+                    onChange={(e) => {
+                      if (activeMonitor) {
+                        handleUpdateVolume(activeMonitor.id, parseInt(e.target.value));
+                      }
+                    }}
+                    className="flex-grow accent-emerald-500 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer outline-none min-w-0"
+                  />
+                  <span className="text-[9.5px] font-mono font-black text-stone-200 tabular-nums w-8 text-right shrink-0">
+                    {activeMonitor?.mute ? "0%" : `${typeof activeMonitor?.volume === "number" ? activeMonitor.volume : 80}%`}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeMonitor) {
+                      const currentVol = typeof activeMonitor.volume === "number" ? activeMonitor.volume : 80;
+                      handleUpdateVolume(activeMonitor.id, currentVol + 10);
+                    }
+                  }}
+                  className="p-1 px-1.5 rounded bg-stone-800 hover:bg-stone-750 text-stone-300 hover:text-white font-black text-xs active:scale-90 transition-all cursor-pointer select-none leading-none border border-stone-700/30"
+                  title="Aumentar Volume 10%"
+                >
+                  +
+                </button>
               </div>
 
               <button

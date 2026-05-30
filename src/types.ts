@@ -11,6 +11,7 @@ export interface MonitorState {
   currentVideoIndex: number;
   isPlaying: boolean;
   mute: boolean;
+  volume?: number;
   orientation?: "landscape" | "portrait";
   ip?: string;
   forceRefreshTime?: string;
