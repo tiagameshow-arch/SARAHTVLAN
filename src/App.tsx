@@ -3500,28 +3500,8 @@ function PassengerPhone({
           </div>
         </div>
 
-        {/* GOOGLE CHROME SEARCH BAR */}
-        <div className="px-3 py-1 bg-[#f1f3f4] z-10 shrink-0 select-none">
-          <div className="bg-white rounded-full px-3.5 py-2 flex items-center gap-2 shadow-3xs border border-stone-200 transition-all hover:shadow-xs">
-            {/* Beautiful G Icon banner */}
-            <div className="w-5 h-5 flex items-center justify-center mr-0.5 select-none font-black font-sans shrink-0 bg-stone-100 rounded-full text-xs">
-              <span className="text-blue-500">G</span>
-              <span className="text-red-500 text-[10px] scale-90">o</span>
-              <span className="text-yellow-500 text-[10px] scale-90 font-bold">o</span>
-            </div>
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Pesquisar notícias de Osasco..." 
-              className="w-full bg-transparent border-none text-stone-800 text-[11px] font-bold outline-none focus:ring-0 placeholder-stone-400 font-sans"
-            />
-            <span className="text-[11px] text-stone-400 shrink-0">🔍</span>
-          </div>
-        </div>
-
         {/* PILLS CATEGORIES TABS */}
-        <div className="z-10 px-2 pb-1 shrink-0 bg-[#f1f3f4] select-none">
+        <div className="z-10 px-2 pb-1.5 pt-1.5 shrink-0 bg-[#f1f3f4] select-none">
           <div className="flex overflow-x-auto whitespace-nowrap gap-1 py-1.5 px-0.5 scrollbar-none scroll-smooth">
             {SLIDES_SEQUENCE.map((s) => {
               let label = "";
@@ -3646,32 +3626,6 @@ function PassengerPhone({
 
                         {/* Floating Interaction and guidance Panel on the right margin */}
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-4 text-center items-center z-20">
-                          <button 
-                            onClick={() => {
-                              setLikedArticles(prev => ({ ...prev, "clima-osasco-post": !prev["clima-osasco-post"] }));
-                            }}
-                            className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-red-500 transition active:scale-75 focus:outline-none"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
-                              <svg viewBox="0 0 24 24" fill={likedArticles["clima-osasco-post"] ? "#ef4444" : "none"} stroke={likedArticles["clima-osasco-post"] ? "#ef4444" : "#ffffff"} strokeWidth="2.5" className="w-4.5 h-4.5">
-                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                              </svg>
-                            </div>
-                            <span className="text-[7px] font-bold font-mono text-white/95">{likedArticles["clima-osasco-post"] ? 1421 : 1420}</span>
-                          </button>
-
-                          <button 
-                            onClick={() => setActiveCommentsPost("clima-osasco-post")}
-                            className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-blue-400 transition active:scale-75 focus:outline-none"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="w-4.5 h-4.5">
-                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                              </svg>
-                            </div>
-                            <span className="text-[7px] font-bold font-mono text-white/95">{commentsState["clima-osasco-post"]?.length || 3}</span>
-                          </button>
-
                           <div className="mt-2 text-white/30 text-[9px] animate-bounce flex flex-col items-center">
                             <span>▲</span>
                             <span className="text-[5px] font-black uppercase font-mono tracking-tighter leading-none">Subir</span>
@@ -3772,67 +3726,9 @@ function PassengerPhone({
                         </span>
                       </div>
 
-                      {/* Right side Floating panel of action triggers (like, comment, bookmark, share!) */}
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-4 text-center items-center z-20 select-none">
-                        <button 
-                          onClick={() => {
-                            setLikedArticles(prev => ({ ...prev, [item.title]: !prev[item.title] }));
-                          }}
-                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-red-500 transition active:scale-75 focus:outline-none"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
-                            <svg viewBox="0 0 24 24" fill={likedArticles[item.title] ? "#ef4444" : "none"} stroke={likedArticles[item.title] ? "#ef4444" : "#ffffff"} strokeWidth="2.5" className="w-4.5 h-4.5">
-                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                            </svg>
-                          </div>
-                          <span className="text-[7px] font-bold font-mono text-white/95">{likedArticles[item.title] ? 594 : 593}</span>
-                        </button>
-
-                        <button 
-                          onClick={() => setActiveCommentsPost(item.title)}
-                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-blue-400 transition active:scale-75 focus:outline-none"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="w-4.5 h-4.5">
-                              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                            </svg>
-                          </div>
-                          <span className="text-[7px] font-bold font-mono text-white/95">{commentsState[item.title]?.length || 2}</span>
-                        </button>
-
-                        <button 
-                          onClick={() => {
-                            setCopiedToast(`Link copiado de ${profile.username}`);
-                            setTimeout(() => setCopiedToast(null), 3000);
-                          }}
-                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-green-400 transition active:scale-75 focus:outline-none"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="w-4.5 h-4.5">
-                              <line x1="22" y1="2" x2="11" y2="13" />
-                              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                            </svg>
-                          </div>
-                          <span className="text-[5.5px] font-black uppercase font-mono tracking-tighter text-white/80 leading-none">Enviar</span>
-                        </button>
-
-                        <button 
-                          onClick={() => {
-                            setBookmarkedArticles(prev => ({ ...prev, [item.title]: !prev[item.title] }));
-                          }}
-                          className="flex flex-col items-center gap-0.5 text-stone-300 hover:text-amber-400 transition active:scale-75 focus:outline-none"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-black/45 border border-white/15 flex items-center justify-center p-1 backdrop-blur-sm shadow-sm">
-                            <svg viewBox="0 0 24 24" fill={bookmarkedArticles[item.title] ? "#f59e0b" : "none"} stroke={bookmarkedArticles[item.title] ? "#f59e0b" : "#ffffff"} strokeWidth="2.5" className="w-4.5 h-4.5">
-                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                            </svg>
-                          </div>
-                          <span className="text-[5.5px] font-black uppercase font-mono tracking-tighter text-white/80 leading-none">Placar</span>
-                        </button>
-
-                        <div className="mt-1 text-white/25 text-[8px] animate-pulse flex flex-col items-center">
-                          <span className="text-[5px] font-bold font-mono uppercase tracking-tighter text-white/60">Arraste</span>
-                          <span>▲</span>
+                      <div className="absolute right-4 bottom-4 flex flex-col items-center z-20 select-none">
+                        <div className="bg-black/40 border border-white/10 px-2 py-1 rounded-md backdrop-blur-xs text-[7px] font-mono text-white/70">
+                          <span>▲ DESLIZAR</span>
                         </div>
                       </div>
                     </div>
