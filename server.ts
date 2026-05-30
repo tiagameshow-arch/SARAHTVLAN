@@ -471,6 +471,9 @@ async function startServer() {
         isPlaying: true,
         mute: true,
         orientation: orientation || "landscape",
+        layoutMode: "standard",
+        phonePosition: "top",
+        volume: 80,
         ip: clientIp,
         isOnline: true
       };

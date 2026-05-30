@@ -957,7 +957,7 @@ export default function App() {
       setLocationValue(selectedMon.location || "");
       setCustomBusLinesValue(selectedMon.customBusLines || "");
     }
-  }, [selectedMonitorId]);
+  }, [selectedMonitorId, tvState.monitors]);
 
   // Keep a mutable ref of the state so the SSE/EventSource useEffect doesn't have to keep reconnecting on state changes
   const tvStateRef = useRef<TVState>(tvState);
@@ -1503,7 +1503,14 @@ export default function App() {
       playlist: ["ysz5S6PUM-U"], // start with city drone
       currentVideoIndex: 0,
       isPlaying: true,
-      mute: false
+      mute: true, // Auto mute to bypass browser restrictions on initial boot
+      volume: 80,
+      orientation: "landscape",
+      layoutMode: "standard",
+      phonePosition: "top",
+      location: "Avenida Zumbi dos Palmares",
+      customBusLines: "035/034/466X1",
+      isOnline: true
     };
     const updatedMonitors = [...tvStateRef.current.monitors, newMonitor];
     setNewMonitorNameInput("");
@@ -1809,80 +1816,152 @@ export default function App() {
         </div>
 
         {/* ROW 2: SPLIT SCREEN (SMARTPHONE + TV STREAM) */}
-        <div className="flex-grow w-full relative flex items-center justify-center p-4 md:p-8 z-10 overflow-hidden">
-          <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 xl:gap-16">
-            
-            {/* Left Layer: Smartphone carrying Weather, Schedules, bus stops (hidden if portrait to maximize vertical screen coverage!) */}
-            {monitorObj.orientation !== "portrait" && (
+        <div className="flex-grow w-full relative flex items-center justify-center p-4 md:p-6 z-10 overflow-hidden">
+          {monitorObj.orientation === "portrait" ? (
+            /* DUAL STACKED PORTRAIT LAYOUT: CELLPHONE LAYING DOWN (LANDSCAPE) + VIDEO SCREEN PORTRAIT */
+            <div className="w-full max-w-[420px] h-full flex flex-col justify-center items-center gap-3 md:gap-4">
+              {(() => {
+                const phonePos = monitorObj.phonePosition || "top";
+                
+                const renderPhoneElement = () => (
+                  <div className="w-full transition-all duration-300 transform scale-95 origin-center">
+                    {/* Rotated Cellphone (Landscape mode) */}
+                    <div className="w-full shadow-2xl relative">
+                      {renderPassengerPhone(monitorObj, true)}
+                    </div>
+                  </div>
+                );
+
+                const renderVideoElement = () => (
+                  <div className="w-full flex-grow flex flex-col items-center justify-center max-h-[62%] transition-all duration-300 font-sans">
+                    <div className="relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden w-full aspect-[9/16] flex flex-col justify-between items-stretch">
+                      {/* Simulated Screen Header */}
+                      <div className="relative w-full h-8 bg-black/75 backdrop-blur-sm border-b border-white/10 px-3 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-white text-[8px] sm:text-[9.5px] font-mono tracking-wider font-extrabold uppercase truncate max-w-[200px]">
+                            {monitorObj.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[6px] text-stone-400 uppercase font-bold tracking-widest leading-none">RETRANSMISSOR DIGITAL</span>
+                        </div>
+                      </div>
+
+                      {/* Simulated Screen Video Body */}
+                      <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
+                        {currentVidId ? (
+                          currentVidId.startsWith("vdoninja-") ? (
+                            <iframe
+                              src={`https://vdo.ninja/?view=${currentVidId.replace("vdoninja-", "")}&autoplay=1&bgopacity=0&transparent=1${monitorObj.mute ? "&mute=1" : ""}`}
+                              allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
+                              className="absolute inset-0 w-full h-full border-none pointer-events-auto"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <YouTubePlayer
+                              videoId={currentVidId}
+                              mute={monitorObj.mute}
+                              volume={monitorObj.volume}
+                              onEnded={() => handleNextVideo(monitorObj.id)}
+                              className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
+                              title="Sinal Retransmissor de Merchandising"
+                            />
+                          )
+                        ) : (
+                          <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
+                            <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Stand decorative footer */}
+                    <div className="flex flex-col items-center pointer-events-none select-none z-0 mt-0.5">
+                      <div className="w-6 h-2 bg-stone-850 border-x border-stone-800 opacity-80" />
+                      <div className="w-16 h-1 bg-stone-800 rounded-t-2xl opacity-80" />
+                    </div>
+                  </div>
+                );
+
+                if (phonePos === "bottom") {
+                  return (
+                    <>
+                      {renderVideoElement()}
+                      {renderPhoneElement()}
+                    </>
+                  );
+                } else {
+                  return (
+                    <>
+                      {renderPhoneElement()}
+                      {renderVideoElement()}
+                    </>
+                  );
+                }
+              })()}
+            </div>
+          ) : (
+            /* STANDARD HORIZONTAL/LANDSCAPE TV VIEW */
+            <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 xl:gap-16">
               <div className="w-full max-w-[260px] sm:max-w-[280px] shrink-0 transition-all duration-300">
                 <div className="w-full">
                   {renderPassengerPhone(monitorObj)}
                 </div>
               </div>
-            )}
 
-            {/* Right Layer: Physical TV Frame with Stream */}
-            <div className={`flex flex-col items-center w-full transition-all duration-300 ${
-              monitorObj.orientation === "portrait"
-                ? "max-h-full max-w-[450px]"
-                : "flex-grow max-w-[960px]"
-            }`}>
-              <div className={`relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden w-full flex flex-col justify-between items-stretch transition-all duration-300 ${
-                monitorObj.orientation === "portrait"
-                  ? "aspect-[9/16]"
-                  : "aspect-video"
-              }`}>
-                
-                {/* Simulated Screen Header */}
-                <div className="relative w-full h-8 bg-black/75 backdrop-blur-sm border-b border-white/10 px-3 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-white text-[8px] sm:text-[9.5px] font-mono tracking-wider font-extrabold uppercase truncate max-w-[200px]">
-                      {monitorObj.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[6px] text-stone-400 uppercase font-bold tracking-widest leading-none">RETRANSMISSOR DIGITAL</span>
-                  </div>
-                </div>
-
-                {/* Simulated Screen Video Body */}
-                <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
-                  {currentVidId ? (
-                    currentVidId.startsWith("vdoninja-") ? (
-                      <iframe
-                        src={`https://vdo.ninja/?view=${currentVidId.replace("vdoninja-", "")}&autoplay=1&bgopacity=0&transparent=1${monitorObj.mute ? "&mute=1" : ""}`}
-                        allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
-                        className="absolute inset-0 w-full h-full border-none pointer-events-auto"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <YouTubePlayer
-                        videoId={currentVidId}
-                        mute={monitorObj.mute}
-                        volume={monitorObj.volume}
-                        onEnded={() => handleNextVideo(monitorObj.id)}
-                        className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
-                        title="Sinal Retransmissor de Merchandising"
-                      />
-                    )
-                  ) : (
-                    <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
-                      <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
+              {/* Right Layer: Physical TV Frame with Stream */}
+              <div className="flex flex-col items-center w-full transition-all duration-300 flex-grow max-w-[960px]">
+                <div className="relative bg-[#050505] border-[10px] border-stone-850 rounded-[1.8rem] p-1 shadow-2xl overflow-hidden w-full aspect-video flex flex-col justify-between items-stretch transition-all duration-300">
+                  {/* Simulated Screen Header */}
+                  <div className="relative w-full h-8 bg-black/75 backdrop-blur-sm border-b border-white/10 px-3 flex items-center justify-between z-10 select-none pointer-events-none shrink-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-white text-[8px] sm:text-[9.5px] font-mono tracking-wider font-extrabold uppercase truncate max-w-[200px]">
+                        {monitorObj.name}
+                      </span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[6px] text-stone-400 uppercase font-bold tracking-widest leading-none">RETRANSMISSOR DIGITAL</span>
+                    </div>
+                  </div>
+
+                  {/* Simulated Screen Video Body */}
+                  <div className="flex-grow w-full h-full relative pointer-events-none z-0 bg-black overflow-hidden flex items-center justify-center">
+                    {currentVidId ? (
+                      currentVidId.startsWith("vdoninja-") ? (
+                        <iframe
+                          src={`https://vdo.ninja/?view=${currentVidId.replace("vdoninja-", "")}&autoplay=1&bgopacity=0&transparent=1${monitorObj.mute ? "&mute=1" : ""}`}
+                          allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
+                          className="absolute inset-0 w-full h-full border-none pointer-events-auto"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <YouTubePlayer
+                          videoId={currentVidId}
+                          mute={monitorObj.mute}
+                          volume={monitorObj.volume}
+                          onEnded={() => handleNextVideo(monitorObj.id)}
+                          className="absolute inset-0 w-full h-full pointer-events-none border-none scale-[1.01]"
+                          title="Sinal Retransmissor de Merchandising"
+                        />
+                      )
+                    ) : (
+                      <div className="absolute inset-0 bg-stone-950 flex items-center justify-center">
+                        <p className="text-white/40 text-xs font-mono">Sem vídeos inseridos...</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-              </div>
-
-              {/* Physical Support Base Decor */}
-              <div className="flex flex-col items-center pointer-events-none select-none z-0 mt-1">
-                <div className="w-8 h-4 bg-stone-850 border-x border-stone-800 opacity-80" />
-                <div className="w-24 h-1.5 bg-stone-800 rounded-t-2xl opacity-80" />
+                {/* Physical Support Base Decor */}
+                <div className="flex flex-col items-center pointer-events-none select-none z-0 mt-1">
+                  <div className="w-8 h-4 bg-stone-850 border-x border-stone-800 opacity-80" />
+                  <div className="w-24 h-1.5 bg-stone-800 rounded-t-2xl opacity-80" />
+                </div>
               </div>
             </div>
-
-          </div>
+          )}
         </div>
 
         {/* FULLSCREEN CONTROLS - Overlayed in Bottom-Right (Fades out when cursor stagnates) */}
